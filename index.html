@@ -7,186 +7,37 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-
-<script>
-    // 2. ตั้งค่าการเชื่อมต่อ (Config)
-    const firebaseConfig = {
-        apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
-        authDomain: "smart-money-meter.firebaseapp.com",
-        databaseURL: "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "smart-money-meter",
-        storageBucket: "smart-money-meter.firebasestorage.app",
-        messagingSenderId: "615707583064",
-        appId: "1:615707583064:web:93e21194a9a7b7da86602d",
-        measurementId: "G-HLSTZXQ61B"
-    };
-
-    // เริ่มต้นระบบ Firebase
-    firebase.initializeApp(firebaseConfig);
-
-    // --- ฟังก์ชัน Login ที่ใช้งานได้จริง ---
-    function login() {
-        const emailInput = document.querySelector('#login-screen input[type="text"]');
-        const passwordInput = document.querySelector('#login-screen input[type="password"]');
-        
-        const email = emailInput.value;
-        const password = passwordInput.value;
-
-        if(!email || !password) return alert("กรุณากรอกอีเมลและรหัสผ่าน");
-
-        // ส่งข้อมูลไปตรวจสอบกับ Firebase Auth
-        firebase.auth().signInWithEmailAndPassword(email, password)
-            .then((userCredential) => {
-                console.log("เข้าสู่ระบบสำเร็จ!");
-                navigate('dashboard-screen');
-                fetchData(); // เริ่มดึงข้อมูลเมื่อ Login สำเร็จ
-            })
-            .catch((error) => {
-                console.error("Login Error:", error.message);
-                alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง (กรุณาสร้าง User ใน Firebase ก่อน)");
-            });
-    }
-
-    // --- ฟังก์ชัน Logout ---
-    function logout() {
-        firebase.auth().signOut().then(() => {
-            navigate('login-screen');
-        });
-    }
-
-    // --- ฟังก์ชันดึงข้อมูลจาก Realtime Database ---
-    function fetchData() {
-        const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
-
-        fetch(FB_URL)
-        .then(res => res.json())
-        .then(data => {
-            if(data) {
-                document.getElementById('dash-watt').innerText = data.current_watt || 0;
-                document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
-                
-                detectAppliance(data.current_watt);
-
-                // ตรวจสอบงบประมาณ
-                if (data.test_device && data.total_baht >= data.test_device.budget_limit) {
-                    const aiTag = document.getElementById('ai-status');
-                    aiTag.innerText = "⚠️ เกินงบประมาณที่ตั้งไว้!";
-                    aiTag.style.background = "var(--danger)";
-                } else {
-                    const aiTag = document.getElementById('ai-status');
-                    aiTag.style.background = "var(--info)"; // รีเซ็ตสีถ้ายังไม่เกิน
-                }
-            }
-        })
-        .catch(err => console.error("Firebase Error:", err));
-    }
-
-    // AI Logic แยกแยะอุปกรณ์
-    function detectAppliance(watt) {
-        const aiTag = document.getElementById('ai-status');
-        if(!aiTag || aiTag.innerText.includes("⚠️")) return; // ถ้าเกินงบไม่ต้องวิเคราะห์ชื่ออุปกรณ์ทับ
-        if (watt <= 5) return aiTag.innerText = "สถานะ: สแตนด์บาย / ไฟรั่ว";
-        if (watt <= 50) return aiTag.innerText = "ตรวจพบ: ไฟแสงสว่าง";
-        if (watt <= 200) return aiTag.innerText = "ตรวจพบ: พัดลม หรือ ทีวี";
-        if (watt <= 500) return aiTag.innerText = "ตรวจพบ: ตู้เย็นกำลังทำงาน";
-        if (watt <= 1000) return aiTag.innerText = "ตรวจพบ: หม้อหุงข้าว";
-        return aiTag.innerText = "ตรวจพบ: เครื่องปรับอากาศ / เตารีด";
-    }
-
-    // ตั้งเวลาดึงข้อมูล
-    setInterval(() => {
-        if(document.getElementById('dashboard-screen').classList.contains('active-screen')) {
-            fetchData();
-        }
-    }, 2000);
-
-    // ฟังก์ชันเปลี่ยนหน้าจอ
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
-        if(id === 'analysis-screen') updateApplianceTable();
-        window.scrollTo(0,0);
-    }
-
-    // ฟังก์ชันบันทึกงบประมาณ (แก้ไขให้ส่งไป Firebase)
-    function saveBudget() {
-        const input = document.getElementById('budget-input');
-        const val = input.value;
-        if(!val) return alert("กรุณาระบุจำนวนเงิน");
-
-        const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
-        
-        fetch(FB_URL, {
-            method: 'PATCH',
-            body: JSON.stringify({ budget_limit: parseFloat(val) })
-        })
-        .then(() => {
-            const t = document.getElementById('toast');
-            t.style.opacity = "1";
-            setTimeout(() => t.style.opacity = "0", 3000);
-            input.value = "";
-        })
-        .catch(err => alert("เกิดข้อผิดพลาดในการบันทึก"));
-    }
-
-    // --- ส่วนงานกราฟ (ทำงานเมื่อโหลดหน้าเสร็จ) ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const opt = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } };
-        new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: ['10:00','11:00','12:00','13:00','14:00'], datasets: [{ data: [15,25,20,35,28], borderColor: '#9370DB', tension: 0.4, fill: true, backgroundColor: 'rgba(147,112,219,0.1)' }] }, options: opt });
-        new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ['00:00','06:00','12:00','18:00'], datasets: [{ data: [5,12,25,18], backgroundColor: '#e67e22' }] }, options: opt });
-        new Chart(document.getElementById('billingChart'), { type: 'bar', data: { labels: ['มี.ค.','เม.ย.','พ.ค.'], datasets: [{ data: [1100,1400,1250], backgroundColor: '#28a745' }] }, options: opt });
-    });
-
-    function updateApplianceTable() {
-        const table = document.getElementById('appliance-table');
-        const applianceWatts = { "แอร์": 154200, "ตู้เย็น": 45600, "ทีวี": 12400 };
-        table.innerHTML = "";
-        for (let name in applianceWatts) {
-            table.innerHTML += `<tr><td>${name}</td><td>${applianceWatts[name]} W</td></tr>`;
-        }
-    }
-</script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
     <style>
         :root {
             --primary: #9370DB; --secondary: #e67e22; --success: #28a745;
             --danger: #dc3545; --bg: #f4f7f9; --card: #ffffff; --info: #17a2b8;
         }
-
         body { font-family: 'Kanit', sans-serif; margin: 0; background-color: var(--bg); color: #333; }
         .main-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         .screen { display: none; flex-direction: column; animation: fadeIn 0.3s ease; }
         .active-screen { display: flex; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
         .card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); position: relative; }
         .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-
         .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
         .metric-label { font-size: 0.9rem; color: #666; }
-        .ai-tag { display: inline-block; background: var(--info); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin-top: 10px; }
-
+        .ai-tag { display: inline-block; background: var(--info); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin-top: 10px; transition: 0.3s; }
         .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-top: 10px; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; }
         .btn-main { background: var(--primary); color: white; }
         .btn-outline { background: white; border: 1px solid #ddd; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; }
-
         .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; font-size: 0.95rem; }
         th { background: #fafafa; }
-
         .header-row { display: flex; align-items: center; margin-bottom: 20px; }
         .chart-box { position: relative; height: 250px; width: 100%; }
-        
-        @media (max-width: 600px) {
-            .metric-value { font-size: 1.8rem; }
-            .chart-box { height: 200px; }
-        }
-
         .success-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 10px 25px; border-radius: 30px; opacity: 0; transition: 0.5s; z-index: 1000; pointer-events: none; }
         .noti-badge { background: var(--primary); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; vertical-align: middle; margin-left: 5px; }
     </style>
@@ -194,14 +45,13 @@
 <body>
 
 <div class="main-container">
-
     <div id="login-screen" class="screen active-screen" style="min-height: 80vh; justify-content: center; align-items: center;">
         <div class="card" style="width: 100%; max-width: 400px; text-align: center;">
             <h1 style="color: var(--primary); font-size: 3rem; margin: 0;">PAY SAVE</h1>
             <p style="color: #666; margin-bottom: 30px;">AI Energy Identification System</p>
-            <input type="text" class="input-field" style="margin-bottom: 15px;" placeholder="อีเมล" value="user@paysave.com">
-            <input type="password" class="input-field" style="margin-bottom: 20px;" placeholder="รหัสผ่าน" value="123456">
-            <button class="btn btn-main" style="width: 100%;" onclick="navigate('dashboard-screen')">เข้าสู่ระบบ</button>
+            <input type="text" id="email-input" class="input-field" style="margin-bottom: 15px;" placeholder="อีเมล" value="user@paysave.com">
+            <input type="password" id="password-input" class="input-field" style="margin-bottom: 20px;" placeholder="รหัสผ่าน" value="123456">
+            <button class="btn btn-main" style="width: 100%;" onclick="login()">เข้าสู่ระบบ</button>
         </div>
     </div>
 
@@ -224,7 +74,7 @@
             <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน <span id="noti-count" class="noti-badge">1</span></button>
             <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 วิเคราะห์ Watts</button>
         </div>
-        <button class="btn btn-main" style="background: var(--danger); margin-top: 20px;" onclick="navigate('login-screen')">ออกจากระบบ</button>
+        <button class="btn btn-main" style="background: var(--danger); margin-top: 20px;" onclick="logout()">ออกจากระบบ</button>
     </div>
 
     <div id="daily-screen" class="screen">
@@ -241,10 +91,7 @@
 
     <div id="billing-screen" class="screen">
         <div class="header-row"><a href="#" class="btn-back" onclick="navigate('dashboard-screen')">←</a><h2>ข้อมูลค่าไฟ</h2></div>
-        <div class="card">
-            <p style="font-weight: bold;">ประวัติค่าไฟรายเดือน</p>
-            <div class="chart-box"><canvas id="billingChart"></canvas></div>
-        </div>
+        <div class="card"><p style="font-weight: bold;">ประวัติค่าไฟรายเดือน</p><div class="chart-box"><canvas id="billingChart"></canvas></div></div>
         <div class="card">
             <p style="font-weight: bold;">ตั้งขีดจำกัดงบประมาณ</p>
             <input type="number" id="budget-input" class="input-field" placeholder="ระบุงบประมาณ (บาท)">
@@ -266,136 +113,105 @@
         <div class="header-row"><a href="#" class="btn-back" onclick="navigate('dashboard-screen')">←</a><h2>วิเคราะห์การใช้ Watts</h2></div>
         <div class="card">
             <p style="font-weight: bold;">ปริมาณไฟฟ้าแยกรายอุปกรณ์ (เดือนนี้)</p>
-            <p style="font-size: 0.8rem; color: #999;">*แสดงผลเป็นพลังงานสะสม (Watts) ข้อมูลรีเซ็ตทุกวันที่ 1</p>
             <table>
-                <thead>
-                    <tr><th>เครื่องใช้ไฟฟ้า</th><th>พลังงานสะสม (Watts)</th></tr>
-                </thead>
-                <tbody id="appliance-table">
-                </tbody>
+                <thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>พลังงานสะสม (Watts)</th></tr></thead>
+                <tbody id="appliance-table"></tbody>
             </table>
         </div>
     </div>
-
 </div>
 
 <div id="toast" class="success-toast">บันทึกสำเร็จ!</div>
 
 <script>
-    const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
-
-    // --- ข้อมูลจำลองเครื่องใช้ไฟฟ้า (Watts สะสม) ---
-    let applianceWatts = {
-        "แอร์ (Inverter)": 154200,
-        "ตู้เย็น": 45600,
-        "พัดลม/ทีวี": 12400,
-        "หม้อหุงข้าว/เตารีด": 28900,
-        "ไฟแสงสว่าง": 8500,
-        "ไฟรั่ว/Standby": 1200
+    // 1. Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
+        authDomain: "smart-money-meter.firebaseapp.com",
+        databaseURL: "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "smart-money-meter",
+        storageBucket: "smart-money-meter.firebasestorage.app",
+        messagingSenderId: "615707583064",
+        appId: "1:615707583064:web:93e21194a9a7b7da86602d",
+        measurementId: "G-HLSTZXQ61B"
     };
+    firebase.initializeApp(firebaseConfig);
 
-    function updateApplianceTable() {
-        const table = document.getElementById('appliance-table');
-        if(!table) return;
-        table.innerHTML = "";
-        for (let name in applianceWatts) {
-            table.innerHTML += `<tr><td>${name}</td><td style="font-weight:bold; color:var(--primary);">${applianceWatts[name].toLocaleString()} W</td></tr>`;
-        }
+    // 2. Login Logic
+    function login() {
+        const email = document.getElementById('email-input').value;
+        const password = document.getElementById('password-input').value;
+        if(!email || !password) return alert("กรุณากรอกข้อมูลให้ครบ");
+
+        firebase.auth().signInWithEmailAndPassword(email, password)
+            .then(() => {
+                navigate('dashboard-screen');
+                fetchData();
+            })
+            .catch((error) => alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message));
     }
 
-    // AI Logic แยกแยะอุปกรณ์ Real-time
+    function logout() {
+        firebase.auth().signOut().then(() => navigate('login-screen'));
+    }
+
+    // 3. Real-time Data Logic
+    function fetchData() {
+        const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
+        fetch(FB_URL)
+            .then(res => res.json())
+            .then(data => {
+                if(data) {
+                    document.getElementById('dash-watt').innerText = data.current_watt || 0;
+                    document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
+                    detectAppliance(data.current_watt);
+
+                    // Check Budget Warning
+                    if (data.test_device && data.test_device.budget_limit && data.total_baht >= data.test_device.budget_limit) {
+                        const aiTag = document.getElementById('ai-status');
+                        aiTag.innerText = "⚠️ เกินงบประมาณที่ตั้งไว้!";
+                        aiTag.style.background = "var(--danger)";
+                    }
+                }
+            })
+            .catch(err => console.error(err));
+    }
+
     function detectAppliance(watt) {
         const aiTag = document.getElementById('ai-status');
-        if(!aiTag) return;
-        if (watt <= 5) return aiTag.innerText = "สถานะ: สแตนด์บาย / ไฟรั่ว";
-        if (watt <= 50) return aiTag.innerText = "ตรวจพบ: ไฟแสงสว่าง";
-        if (watt <= 200) return aiTag.innerText = "ตรวจพบ: พัดลม หรือ ทีวี";
-        if (watt <= 500) return aiTag.innerText = "ตรวจพบ: ตู้เย็นกำลังทำงาน";
-        if (watt <= 1000) return aiTag.innerText = "ตรวจพบ: หม้อหุงข้าว";
-        return aiTag.innerText = "ตรวจพบ: เครื่องปรับอากาศ / เตารีด";
+        if(!aiTag || aiTag.innerText.includes("⚠️")) return;
+        aiTag.style.background = "var(--info)";
+        if (watt <= 5) aiTag.innerText = "สถานะ: สแตนด์บาย / ไฟรั่ว";
+        else if (watt <= 50) aiTag.innerText = "ตรวจพบ: ไฟแสงสว่าง";
+        else if (watt <= 200) aiTag.innerText = "ตรวจพบ: พัดลม หรือ ทีวี";
+        else if (watt <= 500) aiTag.innerText = "ตรวจพบ: ตู้เย็นกำลังทำงาน";
+        else if (watt <= 1000) aiTag.innerText = "ตรวจพบ: หม้อหุงข้าว";
+        else aiTag.innerText = "ตรวจพบ: เครื่องปรับอากาศ / เตารีด";
     }
 
-    function fetchData() {
-    const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json"; 
-
-    fetch(FB_URL)
-    .then(res => res.json())
-    .then(data => {
-        if(data) {
-            // ดึงค่าจาก Firebase มาใส่ในหน้าเว็บ
-            document.getElementById('dash-watt').innerText = data.current_watt || 0;
-            document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
-            
-            // ส่งค่าไปให้ AI วิเคราะห์เครื่องใช้ไฟฟ้า
-            detectAppliance(data.current_watt);
-            // 3. >>> เพิ่มโค้ดตรวจสอบงบประมาณตรงนี้ <<<
-            // หมายเหตุ: ต้องใช้ data.test_device.budget_limit ตามโครงสร้างในรูปของคุณ
-        if (data.test_device && data.total_baht >= data.test_device.budget_limit) {
-            const aiTag = document.getElementById('ai-status');
-            aiTag.innerText = "⚠️ เกินงบประมาณที่ตั้งไว้!";
-            aiTag.style.background = "var(--danger)";
-        }
-    })
-    .catch(err => console.error("Firebase Error:", err));
-}
-    setInterval(fetchData, 2000);
+    function saveBudget() {
+        const val = document.getElementById('budget-input').value;
+        if(!val) return alert("กรุณาระบุจำนวนเงิน");
+        const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
+        fetch(FB_URL, { method: 'PATCH', body: JSON.stringify({ budget_limit: parseFloat(val) }) })
+            .then(() => {
+                document.getElementById('toast').style.opacity = "1";
+                setTimeout(() => document.getElementById('toast').style.opacity = "0", 3000);
+            });
+    }
 
     function navigate(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
         document.getElementById(id).classList.add('active-screen');
-        if(id === 'analysis-screen') updateApplianceTable();
-        window.scrollTo(0,0);
     }
 
-    let notiCount = 1;
-    function saveBudget() {
-    const input = document.getElementById('budget-input');
-    const val = input.value;
-    if(!val) return alert("กรุณาระบุจำนวนเงิน");
-
-    // --- ส่วนเดิมของคุณ (จัดการหน้าจอ) ---
-    const t = document.getElementById('toast');
-    t.style.opacity = "1";
-    setTimeout(() => t.style.opacity = "0", 3000);
-    
-    const list = document.getElementById('noti-list');
-    const item = document.createElement('div');
-    item.className = 'card';
-    item.style.borderLeft = "5px solid var(--primary)";
-    const now = new Date();
-    const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-    item.innerHTML = `
-        <p style="font-weight: bold; color: var(--primary); margin:0;">อัปเดตเป้าหมาย</p>
-        <p style="font-size: 0.9rem; margin: 10px 0;">คุณได้ตั้งค่าขีดจำกัดงบประมาณ ${val} บาท เรียบร้อยแล้ว</p>
-        <p style="font-size: 0.7rem; color: #999; margin:0;">เวลา ${timeStr} น.</p>
-    `;
-    list.insertBefore(item, list.firstChild);
-    notiCount++;
-    document.getElementById('noti-count').innerText = notiCount;
-
-    // --- ส่วนที่ต้อง "เพิ่ม" เข้าไปใหม่ (ส่งข้อมูลไป Firebase) ---
-    const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
-    
-    fetch(FB_URL, {
-        method: 'PATCH', // PATCH คือการแก้ไขเฉพาะบางจุด ไม่ลบข้อมูลเดิม
-        body: JSON.stringify({ 
-            budget_limit: parseFloat(val) // ส่งค่าที่กรอกไปบันทึกเป็นตัวเลข
-        })
-    })
-    .then(res => console.log("Data saved to Firebase"))
-    .catch(err => console.error("Error saving data:", err));
-
-    input.value = ""; // ล้างช่องกรอกข้อมูลหลังจากกดปุ่ม
-    }
-
+    // 4. Initial & Charts
     document.addEventListener('DOMContentLoaded', () => {
-        fetchData();
-        const opt = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } };
-        new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: ['10:00','11:00','12:00','13:00','14:00'], datasets: [{ data: [15,25,20,35,28], borderColor: '#9370DB', tension: 0.4, fill: true, backgroundColor: 'rgba(147,112,219,0.1)' }] }, options: opt });
+        setInterval(() => { if(document.getElementById('dashboard-screen').classList.contains('active-screen')) fetchData(); }, 2000);
+        const opt = { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } } };
+        new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: ['10:00','11:00','12:00','13:00','14:00'], datasets: [{ data: [15,25,20,35,28], borderColor: '#9370DB', tension: 0.4 }] }, options: opt });
         new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ['00:00','06:00','12:00','18:00'], datasets: [{ data: [5,12,25,18], backgroundColor: '#e67e22' }] }, options: opt });
         new Chart(document.getElementById('billingChart'), { type: 'bar', data: { labels: ['มี.ค.','เม.ย.','พ.ค.'], datasets: [{ data: [1100,1400,1250], backgroundColor: '#28a745' }] }, options: opt });
-        new Chart(document.getElementById('annualChart'), { type: 'line', data: { labels: ['2566','2567','2568'], datasets: [{ data: [1200,1500,1420], borderColor: '#dc3545', tension: 0.4 }] }, options: opt });
-        updateApplianceTable();
     });
 </script>
 </body>
