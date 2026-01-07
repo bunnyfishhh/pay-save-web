@@ -187,7 +187,13 @@
             document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
             
             // ส่งค่าไปให้ AI วิเคราะห์เครื่องใช้ไฟฟ้า
-            detectAppliance(data.current_watt); 
+            detectAppliance(data.current_watt);
+            // 3. >>> เพิ่มโค้ดตรวจสอบงบประมาณตรงนี้ <<<
+            // หมายเหตุ: ต้องใช้ data.test_device.budget_limit ตามโครงสร้างในรูปของคุณ
+        if (data.test_device && data.total_baht >= data.test_device.budget_limit) {
+            const aiTag = document.getElementById('ai-status');
+            aiTag.innerText = "⚠️ เกินงบประมาณที่ตั้งไว้!";
+            aiTag.style.background = "var(--danger)";
         }
     })
     .catch(err => console.error("Firebase Error:", err));
