@@ -135,19 +135,25 @@
 
     function fetchData() {
         fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json")
-            .then(res => res.json()).then(data => {
-                if(!data) return;
-                document.getElementById('dash-watt').innerText = data.current_watt || 0;
-                document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
-                
-                const ai = document.getElementById('ai-status');
-                if (data.test_device && data.total_baht >= data.test_device.budget_limit) {
-                    ai.innerText = "⚠️ เกินงบประมาณ!"; ai.style.background = "var(--danger)";
-                } else {
-                    ai.style.background = "var(--info)";
-                    detect(data.current_watt);
-                }
-            });
+        .then(res => res.json())
+        .then(data => {
+            if(!data) return;
+        
+        // อัปเดตตัวเลขบน Dashboard
+            document.getElementById('dash-watt').innerText = data.current_watt || 0;
+            document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
+        
+            const ai = document.getElementById('ai-status');
+        
+        // เช็คเงื่อนไขงบประมาณ
+            if (data.test_device && data.total_baht >= data.test_device.budget_limit) {
+                ai.innerText = "⚠️ เกินงบประมาณ!";
+                ai.style.background = "var(--danger)";
+            } else {
+                ai.style.background = "var(--info)";
+                detect(data.current_watt); // เรียกฟังก์ชันวิเคราะห์อุปกรณ์
+            }
+        });
     }
 
     function detect(w) {
