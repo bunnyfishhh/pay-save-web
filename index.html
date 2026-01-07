@@ -176,19 +176,22 @@
     }
 
     function fetchData() {
-        fetch(FB_URL).then(res => res.json()).then(data => {
-            if(data) {
-                const watt = data.current_watt || 0;
-                const baht = data.total_baht || 0;
-                document.getElementById('dash-watt').innerText = watt;
-                document.getElementById('dash-baht').innerText = baht.toFixed(2);
-                if(document.getElementById('daily-watt')) document.getElementById('daily-watt').innerText = watt + " W";
-                if(document.getElementById('daily-baht')) document.getElementById('daily-baht').innerText = baht.toFixed(2) + " บาท";
-                
-                detectAppliance(watt);
-            }
-        });
-    }
+    const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json"; 
+
+    fetch(FB_URL)
+    .then(res => res.json())
+    .then(data => {
+        if(data) {
+            // ดึงค่าจาก Firebase มาใส่ในหน้าเว็บ
+            document.getElementById('dash-watt').innerText = data.current_watt || 0;
+            document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
+            
+            // ส่งค่าไปให้ AI วิเคราะห์เครื่องใช้ไฟฟ้า
+            detectAppliance(data.current_watt); 
+        }
+    })
+    .catch(err => console.error("Firebase Error:", err));
+}
     setInterval(fetchData, 2000);
 
     function navigate(id) {
@@ -200,28 +203,43 @@
 
     let notiCount = 1;
     function saveBudget() {
-        const input = document.getElementById('budget-input');
-        const val = input.value;
-        if(!val) return alert("กรุณาระบุจำนวนเงิน");
-        const t = document.getElementById('toast');
-        t.style.opacity = "1";
-        setTimeout(() => t.style.opacity = "0", 3000);
-        
-        const list = document.getElementById('noti-list');
-        const item = document.createElement('div');
-        item.className = 'card';
-        item.style.borderLeft = "5px solid var(--primary)";
-        const now = new Date();
-        const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-        item.innerHTML = `
-            <p style="font-weight: bold; color: var(--primary); margin:0;">อัปเดตเป้าหมาย</p>
-            <p style="font-size: 0.9rem; margin: 10px 0;">คุณได้ตั้งค่าขีดจำกัดงบประมาณ ${val} บาท เรียบร้อยแล้ว</p>
-            <p style="font-size: 0.7rem; color: #999; margin:0;">เวลา ${timeStr} น.</p>
-        `;
-        list.insertBefore(item, list.firstChild);
-        notiCount++;
-        document.getElementById('noti-count').innerText = notiCount;
-        input.value = "";
+    const input = document.getElementById('budget-input');
+    const val = input.value;
+    if(!val) return alert("กรุณาระบุจำนวนเงิน");
+
+    // --- ส่วนเดิมของคุณ (จัดการหน้าจอ) ---
+    const t = document.getElementById('toast');
+    t.style.opacity = "1";
+    setTimeout(() => t.style.opacity = "0", 3000);
+    
+    const list = document.getElementById('noti-list');
+    const item = document.createElement('div');
+    item.className = 'card';
+    item.style.borderLeft = "5px solid var(--primary)";
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+    item.innerHTML = `
+        <p style="font-weight: bold; color: var(--primary); margin:0;">อัปเดตเป้าหมาย</p>
+        <p style="font-size: 0.9rem; margin: 10px 0;">คุณได้ตั้งค่าขีดจำกัดงบประมาณ ${val} บาท เรียบร้อยแล้ว</p>
+        <p style="font-size: 0.7rem; color: #999; margin:0;">เวลา ${timeStr} น.</p>
+    `;
+    list.insertBefore(item, list.firstChild);
+    notiCount++;
+    document.getElementById('noti-count').innerText = notiCount;
+
+    // --- ส่วนที่ต้อง "เพิ่ม" เข้าไปใหม่ (ส่งข้อมูลไป Firebase) ---
+    const FB_URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
+    
+    fetch(FB_URL, {
+        method: 'PATCH', // PATCH คือการแก้ไขเฉพาะบางจุด ไม่ลบข้อมูลเดิม
+        body: JSON.stringify({ 
+            budget_limit: parseFloat(val) // ส่งค่าที่กรอกไปบันทึกเป็นตัวเลข
+        })
+    })
+    .then(res => console.log("Data saved to Firebase"))
+    .catch(err => console.error("Error saving data:", err));
+
+    input.value = ""; // ล้างช่องกรอกข้อมูลหลังจากกดปุ่ม
     }
 
     document.addEventListener('DOMContentLoaded', () => {
