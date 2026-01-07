@@ -103,6 +103,7 @@
 <div id="toast" class="success-toast">บันทึกสำเร็จ!</div>
 
 <script>
+    // 1. Firebase Config (ประกาศครั้งเดียว)
     const firebaseConfig = {
         apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
         authDomain: "smart-money-meter.firebaseapp.com",
@@ -117,11 +118,12 @@
     let notiCount = 0;
     let applianceData = { "แอร์": 154200, "ตู้เย็น": 45600, "พัดลม": 12400, "ทีวี": 8500 };
 
+    // 2. ฟังก์ชัน Login
     function login() {
         const e = document.getElementById('email-input').value;
         const p = document.getElementById('password-input').value;
         firebase.auth().signInWithEmailAndPassword(e, p)
-            .then(() => { navigate('dashboard-screen'); setInterval(fetchData, 2000); })
+            .then(() => { navigate('dashboard-screen'); })
             .catch(err => alert("Login Error: " + err.message));
     }
 
@@ -133,88 +135,7 @@
         if(id === 'analysis-screen') updateTable();
     }
 
-    function fetchData() {
-        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json")
-        .then(res => res.json())
-        .then(data => {
-            if(!data) return;
-        
-        // อัปเดตตัวเลขบน Dashboard
-            document.getElementById('dash-watt').innerText = data.current_watt || 0;
-            document.getElementById('dash-baht').innerText = (data.total_baht || 0).toFixed(2);
-        
-            const ai = document.getElementById('ai-status');
-        
-        // เช็คเงื่อนไขงบประมาณ
-            if (data.test_device && data.total_baht >= data.test_device.budget_limit) {
-                ai.innerText = "⚠️ เกินงบประมาณ!";
-                ai.style.background = "var(--danger)";
-            } else {
-                ai.style.background = "var(--info)";
-                detect(data.current_watt); // เรียกฟังก์ชันวิเคราะห์อุปกรณ์
-            }
-        });
-    }
-
-    function detect(w) {
-        const ai = document.getElementById('ai-status');
-        if(w <= 5) ai.innerText = "สแตนด์บาย";
-        else if(w <= 50) ai.innerText = "ไฟแสงสว่าง";
-        else if(w <= 500) ai.innerText = "ตู้เย็น";
-        else ai.innerText = "เครื่องใช้ไฟฟ้าขนาดใหญ่";
-    }
-
-    function saveBudget() {
-        const val = document.getElementById('budget-input').value;
-        if(!val) return;
-        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json", {
-            method: 'PATCH', body: JSON.stringify({ budget_limit: parseFloat(val) })
-        }).then(() => {
-            document.getElementById('toast').style.opacity = "1";
-            setTimeout(() => document.getElementById('toast').style.opacity = "0", 2000);
-            addNoti(`ตั้งงบประมาณใหม่: ${val} บาท`);
-            document.getElementById('budget-input').value = "";
-        });
-    }
-
-    function addNoti(msg) {
-        notiCount++;
-        document.getElementById('noti-count').innerText = notiCount;
-        const list = document.getElementById('noti-list');
-        const card = document.createElement('div');
-        card.className = 'card'; card.style.borderLeft = "5px solid var(--primary)";
-        card.innerHTML = `<p style="margin:0;font-weight:bold;">${msg}</p><p style="font-size:0.7rem;color:#999;margin:0;">${new Date().toLocaleTimeString()} น.</p>`;
-        list.insertBefore(card, list.firstChild);
-    }
-
-    function updateTable() {
-        const t = document.getElementById('appliance-table');
-        t.innerHTML = "";
-        for(let n in applianceData) {
-            t.innerHTML += `<tr><td>${n}</td><td style="font-weight:bold;color:var(--primary);">${applianceData[n].toLocaleString()} W</td></tr>`;
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const opt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
-        new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: ['1','2','3','4','5'], datasets: [{ data: [15,25,20,35,28], borderColor: '#9370DB' }] }, options: opt });
-        new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ['00:00','06:00','12:00','18:00'], datasets: [{ data: [5,12,25,18], backgroundColor: '#e67e22' }] }, options: opt });
-        new Chart(document.getElementById('billingChart'), { type: 'bar', data: { labels: ['มี.ค.','เม.ย.','พ.ค.'], datasets: [{ data: [1100,1400,1250], backgroundColor: '#28a745' }] }, options: opt });
-    });
-
-    // 1. ตั้งค่า Config (นำค่าที่คุณก๊อปปี้มาจาก Project Settings มาวางที่นี่)
-    const firebaseConfig = {
-        apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
-        authDomain: "smart-money-meter.firebaseapp.com",
-        databaseURL: "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "smart-money-meter",
-        storageBucket: "smart-money-meter.firebasestorage.app",
-        messagingSenderId: "615707583064",
-        appId: "1:615707583064:web:93e21194a9a7b7da86602d"
-    };
-    firebase.initializeApp(firebaseConfig);
-
-    // 2. ฟังก์ชันดึงข้อมูลที่คุณเขียนไว้ (จากรูป image_b322c8.png)
+    // 3. ฟังก์ชัน fetchData (ดึงข้อมูล Real-time)
     function fetchData() {
         const URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
         fetch(URL)
@@ -237,7 +158,7 @@
         });
     }
 
-    // 3. ฟังก์ชัน AI (จากรูป image_b322c8.png)
+    // 4. ฟังก์ชัน AI ตรวจจับอุปกรณ์
     function detect(w) {
         const ai = document.getElementById('ai-status');
         if (w <= 5) ai.innerText = "สแตนด์บาย";
@@ -246,10 +167,47 @@
         else ai.innerText = "ตรวจพบ: เครื่องใช้ไฟฟ้าขนาดใหญ่";
     }
 
-    // 4. >>> ส่วนสำคัญ: สั่งให้ระบบทำงานตลอดเวลา <<<
-    fetchData(); // ดึงข้อมูลทันทีเมื่อโหลดหน้าเว็บ
-    setInterval(fetchData, 2000); // ดึงข้อมูลใหม่ทุก 2 วินาทีเพื่อให้เลขใน Vercel ขยับตาม Firebase
+    function saveBudget() {
+        const val = document.getElementById('budget-input').value;
+        if(!val) return;
+        const URL = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json";
+        fetch(URL, { method: 'PATCH', body: JSON.stringify({ budget_limit: parseFloat(val) }) })
+            .then(() => {
+                document.getElementById('toast').style.opacity = "1";
+                setTimeout(() => document.getElementById('toast').style.opacity = "0", 2000);
+                addNoti(`ตั้งงบประมาณใหม่: ${val} บาท`);
+                document.getElementById('budget-input').value = "";
+            });
+    }
 
+    function addNoti(msg) {
+        notiCount++;
+        document.getElementById('noti-count').innerText = notiCount;
+        const list = document.getElementById('noti-list');
+        const card = document.createElement('div');
+        card.className = 'card'; card.style.borderLeft = "5px solid var(--primary)";
+        card.innerHTML = `<p style="margin:0;font-weight:bold;">${msg}</p><p style="font-size:0.7rem;color:#999;margin:0;">${new Date().toLocaleTimeString()} น.</p>`;
+        list.insertBefore(card, list.firstChild);
+    }
+
+    function updateTable() {
+        const t = document.getElementById('appliance-table');
+        t.innerHTML = "";
+        for(let n in applianceData) {
+            t.innerHTML += `<tr><td>${n}</td><td style="font-weight:bold;color:var(--primary);">${applianceData[n].toLocaleString()} W</td></tr>`;
+        }
+    }
+
+    // 5. รันระบบเมื่อโหลดหน้าเสร็จ
+    document.addEventListener('DOMContentLoaded', () => {
+        const opt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+        new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: ['1','2','3','4','5'], datasets: [{ data: [15,25,20,35,28], borderColor: '#9370DB' }] }, options: opt });
+        new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ['00:00','06:00','12:00','18:00'], datasets: [{ data: [5,12,25,18], backgroundColor: '#e67e22' }] }, options: opt });
+        new Chart(document.getElementById('billingChart'), { type: 'bar', data: { labels: ['มี.ค.','เม.ย.','พ.ค.'], datasets: [{ data: [1100,1400,1250], backgroundColor: '#28a745' }] }, options: opt });
+
+        fetchData(); // ดึงทันที 1 ครั้ง
+        setInterval(fetchData, 2000); // ดึงใหม่ทุก 2 วินาที
+    });
 </script>
 </body>
 </html>
