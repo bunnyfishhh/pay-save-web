@@ -70,11 +70,6 @@
         <button class="btn btn-main" style="background: var(--danger); margin-top: 20px;" onclick="logout()">ออกจากระบบ</button>
     </div>
 
-    <div id="daily-screen" class="screen">
-        <div class="header-row"><a href="#" class="btn-back" onclick="navigate('dashboard-screen')">←</a><h2>รายงานรายวัน</h2></div>
-        <div class="card"><div class="chart-box"><canvas id="dailyChart"></canvas></div></div>
-    </div>
-
     <div id="billing-screen" class="screen">
         <div class="header-row"><a href="#" class="btn-back" onclick="navigate('dashboard-screen')">←</a><h2>ข้อมูลค่าไฟ</h2></div>
         <div class="card">
@@ -108,7 +103,7 @@
 <div id="toast" class="success-toast">บันทึกสำเร็จ!</div>
 
 <script>
-    // 1. Firebase Configuration
+    // 1. Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
         authDomain: "smart-money-meter.firebaseapp.com",
@@ -143,7 +138,7 @@
         return energyCharge + serviceCharge + ftCharge + vat;
     }
 
-    // 3. ฟังก์ชันดึงและคำนวณข้อมูล Real-time
+    // 3. ฟังก์ชันหลัก Real-time Fetch
     function fetchData() {
         fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json")
         .then(res => res.json())
@@ -151,27 +146,27 @@
             if(!data) return;
 
             const watt = data.current_watt || 0;
-            // ดึงหน่วยสะสมจาก Firebase (ถ้าไม่มีให้เริ่มที่ 0)
-            currentTotalUnits = data.total_units || 0;
+            currentTotalUnits = data.total_units || 0; //
 
-            // คำนวณหน่วยที่เพิ่มขึ้นในช่วง 2 วินาทีที่ผ่านมา (Watt * Hour / 1000)
+            // คำนวณหน่วยที่เพิ่มขึ้นในช่วง 2 วินาที
             const addedUnits = (watt * (2 / 3600)) / 1000;
             const newTotalUnits = currentTotalUnits + addedUnits;
 
-            // ส่งหน่วยที่อัปเดตกลับไปเซฟใน Firebase ทันที เพื่อไม่ให้ค่าหาย
+            // บันทึกหน่วยกลับไป Firebase
             updateUnitsInFirebase(newTotalUnits);
 
-            // แสดงผล
             const finalCost = calculatePEABill(newTotalUnits);
             document.getElementById('dash-watt').innerText = watt;
             document.getElementById('dash-unit').innerText = newTotalUnits.toFixed(4);
             document.getElementById('dash-baht').innerText = finalCost.toFixed(2);
 
-            // AI แจ้งเตือนงบประมาณ
+            // ตรวจสอบงบประมาณจากโครงสร้าง test_device.budget_limit
             const ai = document.getElementById('ai-status');
-            const budget = data.test_device ? data.test_device.budget_limit : 999999;
-            if (finalCost >= budget) {
-                ai.innerText = "⚠️ เกินงบประมาณ!"; ai.style.background = "var(--danger)";
+            const budget = (data.test_device && data.test_device.budget_limit) ? data.test_device.budget_limit : 0;
+            
+            if (budget > 0 && finalCost >= budget) {
+                ai.innerText = "⚠️ เกินงบประมาณ!"; 
+                ai.style.background = "var(--danger)";
             } else {
                 ai.style.background = "var(--info)";
                 detect(watt);
@@ -185,20 +180,39 @@
         });
     }
 
+    // แก้ไขฟังก์ชันบันทึกงบประมาณให้ถูกต้อง
+    function saveBudget() {
+        const val = document.getElementById('budget-input').value;
+        if(!val) return;
+
+        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json", {
+            method: 'PATCH', 
+            body: JSON.stringify({ 
+                test_device: { 
+                    budget_limit: parseFloat(val) 
+                } 
+            })
+        }).then(() => {
+            const toast = document.getElementById('toast');
+            toast.style.opacity = "1";
+            setTimeout(() => toast.style.opacity = "0", 2000);
+            document.getElementById('budget-input').value = "";
+            fetchData(); // รีเฟรชหน้าจอทันที
+        });
+    }
+
     function resetUnits() {
-        if(confirm("ต้องการเริ่มนับหน่วยใหม่สำหรับเดือนนี้ใช่หรือไม่?")) {
+        if(confirm("เริ่มนับหน่วยใหม่สำหรับเดือนนี้?")) {
             updateUnitsInFirebase(0);
-            alert("รีเซ็ตเรียบร้อย");
         }
     }
 
-    // 4. ฟังก์ชันพื้นฐาน (Login, Navigate, etc.)
     function login() {
-        const email = document.getElementById('email-input').value;
-        const password = document.getElementById('password-input').value;
-        firebase.auth().signInWithEmailAndPassword(email, password)
+        const e = document.getElementById('email-input').value;
+        const p = document.getElementById('password-input').value;
+        firebase.auth().signInWithEmailAndPassword(e, p)
             .then(() => navigate('dashboard-screen'))
-            .catch(err => alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง"));
+            .catch(() => alert("เข้าสู่ระบบไม่สำเร็จ"));
     }
 
     function logout() { firebase.auth().signOut().then(() => location.reload()); }
@@ -211,32 +225,17 @@
     function detect(w) {
         const ai = document.getElementById('ai-status');
         if (w <= 5) ai.innerText = "สแตนด์บาย";
-        else if (w <= 50) ai.innerText = "ตรวจพบ: ไฟแสงสว่าง";
-        else if (w <= 500) ai.innerText = "ตรวจพบ: ตู้เย็น";
+        else if (w <= 50) ai.innerText = "ไฟแสงสว่าง";
+        else if (w <= 500) ai.innerText = "ตู้เย็น";
         else ai.innerText = "เครื่องใช้ไฟฟ้าขนาดใหญ่";
     }
 
-    function saveBudget() {
-        const val = document.getElementById('budget-input').value;
-        if(!val) return;
-        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/test_device.json", {
-            method: 'PATCH', body: JSON.stringify({ budget_limit: parseFloat(val) })
-        }).then(() => {
-            document.getElementById('toast').style.opacity = "1";
-            setTimeout(() => document.getElementById('toast').style.opacity = "0", 2000);
-            document.getElementById('budget-input').value = "";
-        });
-    }
-
-    // 5. เริ่มต้นระบบ
     document.addEventListener('DOMContentLoaded', () => {
         const opt = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
         new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: ['1','2','3','4','5'], datasets: [{ data: [15,25,20,35,28], borderColor: '#9370DB' }] }, options: opt });
-        new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ['0','6','12','18'], datasets: [{ data: [5,12,25,18], backgroundColor: '#e67e22' }] }, options: opt });
-        new Chart(document.getElementById('billingChart'), { type: 'bar', data: { labels: ['มี.ค.','เม.ย.','พ.ค.'], datasets: [{ data: [1100,1400,1250], backgroundColor: '#28a745' }] }, options: opt });
-
+        
         fetchData();
-        setInterval(fetchData, 2000);
+        setInterval(fetchData, 2000); //
     });
 </script>
 </body>
