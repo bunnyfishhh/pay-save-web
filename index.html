@@ -74,46 +74,44 @@
     </div>
 
     <div id="daily-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติการใช้ไฟรายวัน</h2></div>
         <div class="card"><div class="chart-box"><canvas id="dailyChart"></canvas></div></div>
+        <div class="card"><p style="font-weight:bold;">AI Advice:</p><p id="ai-daily-advice">กำลังประมวลผลข้อมูล...</p></div>
     </div>
 
     <div id="billing-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>จัดการค่าไฟ</h2></div>
-        <div class="card"><button class="btn btn-main" style="background: var(--success);" onclick="exportData()">📥 ดาวน์โหลด CSV (Excel)</button></div>
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>จัดการค่าไฟ & ดาวน์โหลด</h2></div>
+        <div class="card">
+            <p style="font-weight: bold;">📥 ดาวน์โหลดรายงานประวัติ (ทุก 5 นาที)</p>
+            <button class="btn btn-main" style="background: var(--success);" onclick="exportHistoryData()">ดาวน์โหลด CSV (Excel)</button>
+        </div>
         <div class="card">
             <p style="font-weight: bold;">ตั้งขีดจำกัดงบประมาณ (บาท)</p>
             <input type="number" id="budget-input" class="input-field" placeholder="ระบุงบประมาณ">
             <button class="btn btn-main" style="margin-top:10px;" onclick="saveBudget()">บันทึกงบประมาณ</button>
             <p style="margin-top:10px;">งบปัจจุบัน: <span id="current-budget-label">0</span> บาท</p>
         </div>
-        <button class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); width: 100%;" onclick="resetUnits()">รีเซ็ตหน่วยสะสมเป็น 0</button>
+        <button class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); width: 100%;" onclick="resetAllData()">🗑️ ล้างข้อมูล & ประวัติทั้งหมด</button>
     </div>
 
     <div id="noti-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>การแจ้งเตือน</h2></div>
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>ประวัติการแจ้งเตือน</h2></div>
         <div id="noti-list" class="card"></div>
         <button class="btn btn-outline" onclick="clearNotiFirebase()">ล้างประวัติการแจ้งเตือน</button>
     </div>
 
     <div id="analysis-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>วิเคราะห์อุปกรณ์</h2></div>
-        <div class="card">
-            <table>
-                <thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>สถานะ</th><th>Watt</th></tr></thead>
-                <tbody id="appliance-table"></tbody>
-            </table>
-        </div>
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>วิเคราะห์อุปกรณ์ AI</h2></div>
+        <div class="card"><table><thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>สถานะ</th><th>Watt</th></tr></thead><tbody id="appliance-table"></tbody></table></div>
     </div>
 </div>
 
 <div id="toast" class="success-toast">สำเร็จ!</div>
 
 <script>
-    // Config & Variables
     const dbUrl = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/";
-    let localTotalUnits = null, currentLimit = 0, lastWatt = 0;
-    let energyChart, dailyChart, hasAlertedBudget = false;
+    let localTotalUnits = null, lastWatt = 0, currentLimit = 0;
+    let energyChart, dailyChart, hasAlertedBudget = false, lastLogMinute = -1;
     let chartData = Array(15).fill(0);
 
     // 1. คำนวณค่าไฟ PEA 1.1.1
@@ -130,7 +128,7 @@
         return (charge + 8.19 + (u * 0.0972)) * 1.07;
     }
 
-    // 2. ดึงข้อมูล Real-time
+    // 2. ดึงข้อมูลและประมวลผลหลัก
     async function fetchData() {
         try {
             const res = await fetch(`${dbUrl}.json`);
@@ -143,118 +141,119 @@
 
             if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
             
-            // คำนวณเพิ่ม (ทุก 2 วินาที)
             localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
             updateFirebase({ total_units: localTotalUnits });
 
-            const cost = calculatePEABill(localTotalUnits);
+            // ระบบ Log 5 นาที
+            const now = new Date();
+            const currentMin = now.getMinutes();
+            if (currentMin % 5 === 0 && currentMin !== lastLogMinute) {
+                postToFirebase('history', { time: now.toLocaleString('th-TH'), watt: lastWatt, unit: localTotalUnits.toFixed(5), baht: calculatePEABill(localTotalUnits).toFixed(2) });
+                lastLogMinute = currentMin;
+            }
+
+            // แสดงผล UI
+            const currentCost = calculatePEABill(localTotalUnits);
             document.getElementById('dash-watt').innerText = lastWatt;
             document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(5);
-            document.getElementById('dash-baht').innerText = cost.toFixed(2);
+            document.getElementById('dash-baht').innerText = currentCost.toFixed(2);
 
-            // Update Chart
             chartData.push(lastWatt);
             chartData.shift();
             energyChart.update('none');
-
-            // AI & Budget Alert
             analyzeAppliance(lastWatt);
-            if(currentLimit > 0 && cost >= currentLimit && !hasAlertedBudget) {
-                addNoti("🚨 เกินงบ!", `ค่าไฟปัจจุบัน ${cost.toFixed(2)} บาท`, "danger");
+
+            // แจ้งเตือนงบประมาณ
+            if(currentLimit > 0 && currentCost >= currentLimit && !hasAlertedBudget) {
+                addNotification("🚨 เกินงบประมาณ!", `ค่าไฟปัจจุบัน ${currentCost.toFixed(2)} บาท`, "danger", currentLimit);
                 hasAlertedBudget = true;
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Fetch Error:", e); }
     }
 
-    // 3. จัดการการแจ้งเตือน
-    async function addNoti(title, msg, type) {
-        const noti = { title, message: msg, type, time: new Date().toLocaleString() };
-        await fetch(`${dbUrl}notifications.json`, { method: 'POST', body: JSON.stringify(noti) });
-        loadNotis();
+    // 3. ระบบจัดการ Firebase
+    function updateFirebase(obj) { fetch(`${dbUrl}.json`, { method: 'PATCH', body: JSON.stringify(obj) }); }
+    async function postToFirebase(path, obj) { await fetch(`${dbUrl}${path}.json`, { method: 'POST', body: JSON.stringify(obj) }); }
+
+    // 4. ระบบแจ้งเตือน
+    async function addNotification(title, msg, type, limit = null) {
+        const noti = { title, message: msg, type, limit, time: new Date().toLocaleString() };
+        await postToFirebase('notifications', noti);
+        loadNotifications();
     }
 
-    async function loadNotis() {
+    async function loadNotifications() {
         const res = await fetch(`${dbUrl}notifications.json`);
         const data = await res.json();
         const list = document.getElementById('noti-list');
-        list.innerHTML = "";
-        let count = 0;
+        list.innerHTML = ""; let count = 0;
         if(data) {
             Object.keys(data).reverse().forEach(k => {
                 const item = data[k];
-                list.innerHTML += `<div class="noti-item ${item.type}"><strong>${item.title}</strong><br>${item.message}<br><small>${item.time}</small></div>`;
+                list.innerHTML += `<div class="noti-item ${item.type}"><strong>${item.title}</strong><br>${item.message}${item.limit ? `<br><small>งบที่ตั้ง: ${item.limit} บาท</small>` : ""}<br><small>${item.time}</small></div>`;
                 count++;
             });
         }
         document.getElementById('noti-count').innerText = count;
     }
 
-    // 4. Helpers
-    function updateFirebase(obj) { fetch(`${dbUrl}.json`, { method: 'PATCH', body: JSON.stringify(obj) }); }
-    
+    // 5. ระบบ Export และดาวน์โหลด
+    async function exportHistoryData() {
+        const res = await fetch(`${dbUrl}history.json`);
+        const data = await res.json();
+        if(!data) return alert("ยังไม่มีประวัติบันทึก (รอทุก 5 นาที)");
+        const rows = [["วัน-เวลา", "Watt", "kWh", "บาท"]];
+        Object.values(data).forEach(v => rows.push([v.time, v.watt, v.unit, v.baht]));
+        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
+        const link = document.createElement("a"); link.href = encodeURI(csv); link.download = "PAY_SAVE_Report.csv"; link.click();
+    }
+
+    // 6. ฟังก์ชันควบคุมอื่นๆ
     function saveBudget() {
         const val = document.getElementById('budget-input').value;
         if(!val) return;
         updateFirebase({ test_device: { budget_limit: parseFloat(val) } });
-        addNoti("⚙️ ตั้งค่า", `เปลี่ยนงบเป็น ${val} บาท`, "setup");
-        hasAlertedBudget = false;
-        showToast();
+        addNotification("⚙️ ตั้งงบประมาณ", `เปลี่ยนเป้าหมายเป็น ${val} บาท`, "setup", val);
+        hasAlertedBudget = false; showToast();
     }
 
-    function resetUnits() {
-        if(confirm("รีเซ็ตหน่วยสะสม?")) {
-            localTotalUnits = 0;
-            updateFirebase({ total_units: 0 });
-            addNoti("⚙️ รีเซ็ต", "ล้างหน่วยไฟฟ้าสะสม", "setup");
-            showToast();
+    async function resetAllData() {
+        if(confirm("ล้างข้อมูลทั้งหมด?")) {
+            await fetch(`${dbUrl}.json`, { method: 'PATCH', body: JSON.stringify({ total_units: 0 }) });
+            await fetch(`${dbUrl}history.json`, { method: 'DELETE' });
+            location.reload();
         }
     }
+
+    function clearNotiFirebase() { if(confirm("ล้างประวัติแจ้งเตือน?")) { fetch(`${dbUrl}notifications.json`, { method: 'DELETE' }).then(() => loadNotifications()); } }
 
     function analyzeAppliance(w) {
         const tb = document.getElementById('appliance-table');
         let n = "สแตนด์บาย", s = "ปกติ";
         if(w > 10 && w < 50) n = "ไฟ/พัดลม";
-        else if(w >= 50 && w < 500) { n = "ตู้เย็น/ทีวี"; s = "กำลังทำงาน"; }
+        else if(w >= 50 && w < 500) { n = "ตู้เย็น/ทีวี"; s = "ทำงาน"; }
         else if(w >= 500) { n = "แอร์/เตารีด"; s = "กินไฟสูง"; }
         tb.innerHTML = `<tr><td>${n}</td><td>${s}</td><td>${w} W</td></tr>`;
     }
 
-    function exportData() {
-        const rows = [["หัวข้อ", "ค่า"], ["วันที่", new Date().toLocaleString()], ["Watt", lastWatt], ["kWh", localTotalUnits.toFixed(5)]];
-        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
-        const link = document.createElement("a"); link.href = encodeURI(csv);
-        link.download = "Paysave_Report.csv"; link.click();
-    }
-
-    function showToast() { 
-        const t = document.getElementById('toast'); t.style.opacity = 1; 
-        setTimeout(() => t.style.opacity = 0, 2000); 
-    }
-
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
-    }
-
+    function showToast() { const t = document.getElementById('toast'); t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 2000); }
+    function navigate(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); document.getElementById(id).classList.add('active-screen'); }
     function login() { navigate('dashboard-screen'); }
     function logout() { location.reload(); }
 
+    // 7. Initialize Charts
     document.addEventListener('DOMContentLoaded', () => {
         energyChart = new Chart(document.getElementById('energyChart'), {
             type: 'line',
             data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, backgroundColor: 'rgba(147, 112, 219, 0.1)', tension: 0.4 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
-
         dailyChart = new Chart(document.getElementById('dailyChart'), {
             type: 'bar',
             data: { labels: ["00:00", "06:00", "12:00", "18:00"], datasets: [{ label: 'kWh', data: [0.2, 0.5, 1.2, 0.8], backgroundColor: '#e67e22' }] },
             options: { responsive: true, maintainAspectRatio: false }
         });
-
-        loadNotis();
-        fetchData();
-        setInterval(fetchData, 2000);
+        loadNotifications(); fetchData(); setInterval(fetchData, 2000);
     });
 </script>
 </body>
