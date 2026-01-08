@@ -114,7 +114,6 @@
 <div id="toast" class="success-toast">บันทึกสำเร็จ!</div>
 
 <script>
-    // 1. Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
         authDomain: "smart-money-meter.firebaseapp.com",
@@ -131,8 +130,10 @@
     let energyChart;
     let chartData = Array(15).fill(0);
     let chartLabels = Array(15).fill("");
+    
+    // ตัวแปรสำคัญสำหรับแก้ปัญหาเลขไม่วิ่ง
+    let localTotalUnits = null; 
 
-    // 2. ฟังก์ชันคำนวณค่าไฟอัตราก้าวหน้า
     function calculatePEABill(units) {
         if (units <= 0) return 0;
         let u = units, charge = 0;
@@ -146,16 +147,6 @@
         return (charge + 8.19 + (u * 0.0972)) * 1.07;
     }
 
-    // 3. ฟังก์ชันบันทึกหน่วยเข้า Firebase (แก้ไขให้ PATCH ทำงานแน่นอน)
-    function updateUnitsInFirebase(val) {
-        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json", {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ total_units: val })
-        }).catch(err => console.error("Firebase Sync Error:", err));
-    }
-
-    // 4. ดึงข้อมูล Real-time และคำนวณสะสม
     function fetchData() {
         fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json")
         .then(res => res.json())
@@ -163,18 +154,22 @@
             if(!data) return;
             const watt = data.current_watt || 0;
             
-            // ดึงหน่วยล่าสุดจาก Firebase และคำนวณบวกเพิ่ม
-            let currentUnits = data.total_units || 0;
+            // แก้ไข Logic: ดึงค่าจาก Firebase แค่ครั้งเดียวตอนโหลดหน้า หรือตอน Reset
+            if (localTotalUnits === null) {
+                localTotalUnits = data.total_units || 0;
+            }
+
+            // คำนวณเพิ่มในฝั่ง Client (2 วินาที = 2/3600 ชั่วโมง)
             const addedUnits = (watt * (2 / 3600)) / 1000;
-            const newTotalUnits = currentUnits + addedUnits;
+            localTotalUnits += addedUnits;
 
-            // ส่งบันทึกกลับไป Firebase
-            updateUnitsInFirebase(newTotalUnits);
+            // ส่งบันทึกกลับไป Firebase ทันทีที่คำนวณเสร็จ
+            updateUnitsInFirebase(localTotalUnits);
 
-            // แสดงผลตัวเลข
-            const cost = calculatePEABill(newTotalUnits);
+            // แสดงผล
+            const cost = calculatePEABill(localTotalUnits);
             document.getElementById('dash-watt').innerText = watt;
-            document.getElementById('dash-unit').innerText = newTotalUnits.toFixed(4);
+            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(5);
             document.getElementById('dash-baht').innerText = cost.toFixed(2);
 
             // อัปเดตกราฟ
@@ -182,10 +177,8 @@
             chartData.shift();
             energyChart.update('none');
 
-            // AI วิเคราะห์
             analyzeAppliance(watt);
 
-            // แจ้งเตือนงบประมาณ
             const budget = data.test_device?.budget_limit || 0;
             if (budget > 0 && cost >= budget && !hasAlertedBudget) {
                 triggerAlert(`ค่าไฟ ${cost.toFixed(2)} บาท เกินงบ ${budget} บาท!`);
@@ -194,7 +187,14 @@
         });
     }
 
-    // ฟังก์ชันย่อยสำหรับ UI
+    function updateUnitsInFirebase(val) {
+        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json", {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ total_units: val })
+        }).catch(err => console.error("Firebase Sync Error:", err));
+    }
+
     function triggerAlert(msg) {
         notiCount++;
         document.getElementById('noti-count').innerText = notiCount;
@@ -211,7 +211,7 @@
         let name = "สแตนด์บาย", status = "ประหยัด";
         if (watt > 10 && watt < 50) { name = "ไฟ/พัดลม"; status = "ปกติ"; }
         else if (watt >= 50 && watt < 500) { name = "ตู้เย็น/ทีวี"; status = "ทำงาน"; }
-        else if (watt >= 500) { name = "เครื่องใช้ไฟฟ้าขนาดใหญ่"; status = "กินไฟสูง"; }
+        else if (watt >= 500) { name = "แอร์/เตารีด"; status = "กินไฟสูง"; }
         tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${watt} W</td></tr>`;
     }
 
@@ -224,12 +224,15 @@
             hasAlertedBudget = false;
             document.getElementById('toast').style.opacity = 1;
             setTimeout(() => document.getElementById('toast').style.opacity = 0, 2000);
-            document.getElementById('budget-input').value = "";
         });
     }
 
     function resetUnits() {
-        if(confirm("เริ่มนับหน่วยใหม่สำหรับเดือนนี้?")) updateUnitsInFirebase(0);
+        if(confirm("เริ่มนับหน่วยใหม่สำหรับเดือนนี้?")) {
+            localTotalUnits = 0; // รีเซ็ตในเครื่อง
+            updateUnitsInFirebase(0); // รีเซ็ตใน Firebase
+            alert("รีเซ็ตหน่วยสะสมเป็น 0 แล้ว");
+        }
     }
 
     function login() { navigate('dashboard-screen'); }
@@ -241,14 +244,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // สร้างกราฟ Energy Chart
         energyChart = new Chart(document.getElementById('energyChart'), {
             type: 'line',
             data: { labels: chartLabels, datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, backgroundColor: 'rgba(147, 112, 219, 0.1)', tension: 0.4 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
 
-        // กราฟประวัติรายเดือน
         new Chart(document.getElementById('billingChart'), {
             type: 'bar',
             data: { labels: ['ต.ค.', 'พ.ย.', 'ธ.ค.'], datasets: [{ label: 'บาท', data: [1250, 1180, 950], backgroundColor: '#9370DB' }] },
@@ -256,7 +257,7 @@
         });
 
         fetchData();
-        setInterval(fetchData, 2000); //
+        setInterval(fetchData, 2000); 
     });
 </script>
 </body>
