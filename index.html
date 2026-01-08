@@ -58,7 +58,7 @@
                     <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p class="metric-label">บาทสะสม (PEA)</p></div>
                 </div>
                 <div id="ai-status" class="ai-tag">AI กำลังวิเคราะห์...</div>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.000</span> kWh</p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.0000</span> kWh</p>
             </div>
             <div class="card">
                 <p style="font-weight:bold; text-align:center;">กราฟการใช้ไฟฟ้า (Watts)</p>
@@ -129,10 +129,10 @@
     let notiCount = 0;
     let hasAlertedBudget = false;
     let energyChart;
-    let chartData = Array(15).fill(0); // เก็บ 15 จุดล่าสุด
+    let chartData = Array(15).fill(0);
     let chartLabels = Array(15).fill("");
 
-    // 2. ฟังก์ชันคำนวณค่าไฟอัตราก้าวหน้า (PEA 1.1.1)
+    // 2. ฟังก์ชันคำนวณค่าไฟอัตราก้าวหน้า
     function calculatePEABill(units) {
         if (units <= 0) return 0;
         let u = units, charge = 0;
@@ -146,65 +146,73 @@
         return (charge + 8.19 + (u * 0.0972)) * 1.07;
     }
 
-    // 3. ระบบแจ้งเตือน In-App
-    function triggerAlert(msg) {
-        notiCount++;
-        document.getElementById('noti-count').innerText = notiCount;
-        document.getElementById('no-noti').style.display = 'none';
-        
-        const item = document.createElement('div');
-        item.className = 'noti-item';
-        item.innerHTML = `<strong>⚠️ เกินงบประมาณ:</strong> ${msg} <br><small>${new Date().toLocaleTimeString()} น.</small>`;
-        document.getElementById('noti-list').prepend(item);
-        
-        alert("แจ้งเตือน PAY SAVE: " + msg);
+    // 3. ฟังก์ชันบันทึกหน่วยเข้า Firebase (แก้ไขให้ PATCH ทำงานแน่นอน)
+    function updateUnitsInFirebase(val) {
+        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json", {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ total_units: val })
+        }).catch(err => console.error("Firebase Sync Error:", err));
     }
 
-    // 4. วิเคราะห์อุปกรณ์ (AI Analysis)
-    function analyzeAppliance(watt) {
-        const tbody = document.getElementById('appliance-table');
-        let name = "สแตนด์บาย", status = "ประหยัดไฟ";
-        if (watt > 10 && watt < 50) { name = "ไฟแสงสว่าง/พัดลม"; status = "ปกติ"; }
-        else if (watt >= 50 && watt < 500) { name = "ตู้เย็น/ทีวี"; status = "กำลังทำงาน"; }
-        else if (watt >= 500) { name = "เครื่องกินไฟสูง (แอร์/เตารีด)"; status = "เฝ้าระวัง"; }
-        tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${watt} W</td></tr>`;
-    }
-
-    // 5. ดึงข้อมูล Real-time
+    // 4. ดึงข้อมูล Real-time และคำนวณสะสม
     function fetchData() {
         fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json")
         .then(res => res.json())
         .then(data => {
             if(!data) return;
             const watt = data.current_watt || 0;
-            const units = data.total_units || 0;
-            const cost = calculatePEABill(units);
-            const budget = data.test_device?.budget_limit || 0;
+            
+            // ดึงหน่วยล่าสุดจาก Firebase และคำนวณบวกเพิ่ม
+            let currentUnits = data.total_units || 0;
+            const addedUnits = (watt * (2 / 3600)) / 1000;
+            const newTotalUnits = currentUnits + addedUnits;
 
-            // อัปเดตตัวเลข
+            // ส่งบันทึกกลับไป Firebase
+            updateUnitsInFirebase(newTotalUnits);
+
+            // แสดงผลตัวเลข
+            const cost = calculatePEABill(newTotalUnits);
             document.getElementById('dash-watt').innerText = watt;
-            document.getElementById('dash-unit').innerText = units.toFixed(4);
+            document.getElementById('dash-unit').innerText = newTotalUnits.toFixed(4);
             document.getElementById('dash-baht').innerText = cost.toFixed(2);
 
-            // อัปเดตกราฟหน้าแรก
+            // อัปเดตกราฟ
             chartData.push(watt);
             chartData.shift();
-            energyChart.update('none'); // อัปเดตแบบไม่กระตุก
+            energyChart.update('none');
 
+            // AI วิเคราะห์
             analyzeAppliance(watt);
 
             // แจ้งเตือนงบประมาณ
+            const budget = data.test_device?.budget_limit || 0;
             if (budget > 0 && cost >= budget && !hasAlertedBudget) {
-                triggerAlert(`ค่าไฟ ${cost.toFixed(2)} บาท เกินงบ ${budget} บาทที่ตั้งไว้!`);
+                triggerAlert(`ค่าไฟ ${cost.toFixed(2)} บาท เกินงบ ${budget} บาท!`);
                 hasAlertedBudget = true;
             }
         });
     }
 
-    // 6. การจัดการ UI และ Charts
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
+    // ฟังก์ชันย่อยสำหรับ UI
+    function triggerAlert(msg) {
+        notiCount++;
+        document.getElementById('noti-count').innerText = notiCount;
+        document.getElementById('no-noti').style.display = 'none';
+        const item = document.createElement('div');
+        item.className = 'noti-item';
+        item.innerHTML = `<strong>⚠️ คำเตือน:</strong> ${msg} <br><small>${new Date().toLocaleTimeString()} น.</small>`;
+        document.getElementById('noti-list').prepend(item);
+        alert("🚨 PAY SAVE: " + msg);
+    }
+
+    function analyzeAppliance(watt) {
+        const tbody = document.getElementById('appliance-table');
+        let name = "สแตนด์บาย", status = "ประหยัด";
+        if (watt > 10 && watt < 50) { name = "ไฟ/พัดลม"; status = "ปกติ"; }
+        else if (watt >= 50 && watt < 500) { name = "ตู้เย็น/ทีวี"; status = "ทำงาน"; }
+        else if (watt >= 500) { name = "เครื่องใช้ไฟฟ้าขนาดใหญ่"; status = "กินไฟสูง"; }
+        tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${watt} W</td></tr>`;
     }
 
     function saveBudget() {
@@ -214,33 +222,33 @@
             method: 'PATCH', body: JSON.stringify({ test_device: { budget_limit: parseFloat(val) } })
         }).then(() => {
             hasAlertedBudget = false;
-            const t = document.getElementById('toast');
-            t.style.opacity = 1;
-            setTimeout(() => t.style.opacity = 0, 2000);
+            document.getElementById('toast').style.opacity = 1;
+            setTimeout(() => document.getElementById('toast').style.opacity = 0, 2000);
             document.getElementById('budget-input').value = "";
         });
     }
 
     function resetUnits() {
-        if(confirm("เริ่มนับหน่วยใหม่สำหรับรอบบิลนี้?")) {
-            fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json", {
-                method: 'PATCH', body: JSON.stringify({ total_units: 0 })
-            });
-        }
+        if(confirm("เริ่มนับหน่วยใหม่สำหรับเดือนนี้?")) updateUnitsInFirebase(0);
     }
 
     function login() { navigate('dashboard-screen'); }
     function logout() { location.reload(); }
 
+    function navigate(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+        document.getElementById(id).classList.add('active-screen');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-        // กราฟหน้าแรก (Real-time Watts)
+        // สร้างกราฟ Energy Chart
         energyChart = new Chart(document.getElementById('energyChart'), {
             type: 'line',
             data: { labels: chartLabels, datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, backgroundColor: 'rgba(147, 112, 219, 0.1)', tension: 0.4 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
 
-        // กราฟรายเดือน (Mock Data)
+        // กราฟประวัติรายเดือน
         new Chart(document.getElementById('billingChart'), {
             type: 'bar',
             data: { labels: ['ต.ค.', 'พ.ย.', 'ธ.ค.'], datasets: [{ label: 'บาท', data: [1250, 1180, 950], backgroundColor: '#9370DB' }] },
@@ -248,7 +256,7 @@
         });
 
         fetchData();
-        setInterval(fetchData, 2000); // อัปเดตทุก 2 วินาที
+        setInterval(fetchData, 2000); //
     });
 </script>
 </body>
