@@ -35,7 +35,6 @@
         .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; }
         .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
         .noti-item.setup { border-left-color: var(--primary); background: #f8f4ff; }
-        .budget-info-tag { font-size: 0.75rem; color: var(--primary); font-weight: bold; margin-top: 5px; display: block; }
     </style>
 </head>
 <body>
@@ -78,8 +77,15 @@
     </div>
 
     <div id="daily-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
-        <div class="card"><div class="chart-box"><canvas id="dailyChart"></canvas></div></div>
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติการใช้ไฟฟ้ารายวัน</h2></div>
+        <div class="card">
+            <p style="text-align:center; font-weight:bold;">ปริมาณหน่วยที่ใช้ (kWh) แยกตามช่วงเวลา</p>
+            <div class="chart-box"><canvas id="dailyChart"></canvas></div>
+        </div>
+        <div class="card">
+            <p style="font-weight:bold;">คำแนะนำจาก AI</p>
+            <p id="ai-daily-advice">กำลังประมวลผลข้อมูลการใช้ไฟรายวันของคุณ...</p>
+        </div>
     </div>
 
     <div id="billing-screen" class="screen">
@@ -99,9 +105,7 @@
 
     <div id="noti-screen" class="screen">
         <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>การแจ้งเตือนระบบ</h2></div>
-        <div id="noti-list" class="card">
-            <p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>
-        </div>
+        <div id="noti-list" class="card"><p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p></div>
         <button class="btn btn-outline" style="margin-top: 10px;" onclick="clearNotiFirebase()">ล้างประวัติการแจ้งเตือน</button>
     </div>
 
@@ -119,6 +123,7 @@
 <div id="toast" class="success-toast">สำเร็จ!</div>
 
 <script>
+    // 1. Firebase Setup
     const firebaseConfig = {
         apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
         authDomain: "smart-money-meter.firebaseapp.com",
@@ -131,13 +136,15 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    // 2. Variables
     let hasAlertedBudget = false;
     let currentLimit = 0;
-    let energyChart;
+    let energyChart, dailyChart;
     let chartData = Array(15).fill(0);
     let localTotalUnits = null;
     let lastWatt = 0;
 
+    // 3. Billing Logic
     function calculatePEABill(units) {
         if (units <= 0) return 0;
         let u = units, charge = 0;
@@ -151,72 +158,63 @@
         return (charge + 8.19 + (u * 0.0972)) * 1.07;
     }
 
-    // 1. ฟังก์ชันโหลดการแจ้งเตือนจาก Firebase มาแสดง
+    // 4. Daily Stats Logic
+    function updateDailyStats(units) {
+        const hours = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"];
+        // จำลองการกระจายหน่วยไฟฟ้าตามช่วงเวลา (ในระบบจริงควรเก็บแยกใน Firebase)
+        const mockDailyData = [units * 0.1, units * 0.05, units * 0.2, units * 0.3, units * 0.25, units * 0.1];
+        
+        if(dailyChart) {
+            dailyChart.data.datasets[0].data = mockDailyData;
+            dailyChart.update();
+        }
+
+        const advice = document.getElementById('ai-daily-advice');
+        if (units > 10) advice.innerText = "วันนี้ใช้ไฟค่อนข้างสูง แนะนำให้ลดการใช้เครื่องปรับอากาศในช่วง 12:00 - 16:00 น.";
+        else advice.innerText = "การใช้ไฟฟ้าของคุณวันนี้อยู่ในเกณฑ์ดีเยี่ยม รักษามาตรฐานนี้ไว้นะคะ!";
+    }
+
+    // 5. Firebase Fetch & Sync
     function loadNotifications() {
         db.ref('notifications').limitToLast(10).on('value', (snapshot) => {
             const list = document.getElementById('noti-list');
             const badge = document.getElementById('noti-count');
             list.innerHTML = "";
             let count = 0;
-
             if (snapshot.exists()) {
                 document.getElementById('no-noti').style.display = 'none';
                 const data = snapshot.val();
-                // เรียงจากใหม่ไปเก่า
                 Object.keys(data).reverse().forEach(key => {
                     const item = data[key];
                     const div = document.createElement('div');
                     div.className = `noti-item ${item.type}`;
-                    div.innerHTML = `
-                        <strong>${item.title}</strong><br>
-                        ${item.message}
-                        ${item.limit ? `<span class="budget-info-tag">งบประมาณ: ${item.limit} บาท</span>` : ""}
-                        <small style="color:#999; display:block; margin-top:5px;">${item.time}</small>
-                    `;
+                    div.innerHTML = `<strong>${item.title}</strong><br>${item.message}<small style="color:#999; display:block; margin-top:5px;">${item.time}</small>`;
                     list.appendChild(div);
                     count++;
                 });
                 badge.innerText = count;
-            } else {
-                list.innerHTML = '<p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>';
-                badge.innerText = "0";
             }
         });
     }
 
-    // 2. ฟังก์ชันเพิ่มการแจ้งเตือนลง Firebase
-    function addNotificationToFirebase(title, message, type, limitValue = null) {
-        db.ref('notifications').push({
-            title: title,
-            message: message,
-            type: type,
-            limit: limitValue,
-            time: new Date().toLocaleString()
-        });
+    function addNotificationToFirebase(title, message, type) {
+        db.ref('notifications').push({ title, message, type, time: new Date().toLocaleString() });
         if(type === 'danger') alert(`🚨 ${title}: ${message}`);
-    }
-
-    function clearNotiFirebase() {
-        if(confirm("ล้างประวัติการแจ้งเตือนทั้งหมด?")) {
-            db.ref('notifications').remove();
-        }
     }
 
     function fetchData() {
         db.ref('/').on('value', (snapshot) => {
             const data = snapshot.val();
             if(!data) return;
-            
             lastWatt = data.current_watt || 0;
             currentLimit = data.test_device?.budget_limit || 0;
             document.getElementById('current-budget-label').innerText = currentLimit;
             
             if (localTotalUnits === null) localTotalUnits = data.total_units || 0;
             
-            // คำนวณเพิ่ม (เนื่องจากดึง Real-time ตลอดเวลา เราใช้ Logic บวกลดลงเล็กน้อย)
-            const addedUnits = (lastWatt * (1 / 3600)) / 1000; 
+            // คำนวณสะสม (สมมติความถี่ 2 วินาที)
+            const addedUnits = (lastWatt * (2 / 3600)) / 1000; 
             localTotalUnits += addedUnits;
-
             db.ref('/').update({ total_units: localTotalUnits });
 
             const cost = calculatePEABill(localTotalUnits);
@@ -228,24 +226,30 @@
             chartData.shift();
             if(energyChart) energyChart.update('none');
 
+            updateDailyStats(localTotalUnits);
             analyzeAppliance(lastWatt);
 
             if (currentLimit > 0 && cost >= currentLimit && !hasAlertedBudget) {
-                addNotificationToFirebase('เกินงบประมาณ', `ค่าไฟปัจจุบัน ${cost.toFixed(2)} บาท`, 'danger', currentLimit);
+                addNotificationToFirebase('เกินงบประมาณ', `ค่าไฟปัจจุบัน ${cost.toFixed(2)} บาท`, 'danger');
                 hasAlertedBudget = true;
             }
         });
     }
 
+    // 6. UI Helpers
+    function navigate(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+        document.getElementById(id).classList.add('active-screen');
+    }
+
     function saveBudget() {
         const val = document.getElementById('budget-input').value;
         if(!val) return;
-        db.ref('test_device').update({ budget_limit: parseFloat(val) })
-        .then(() => { 
-            hasAlertedBudget = false; 
-            showToast(); 
-            addNotificationToFirebase('ตั้งค่าระบบ', `เปลี่ยนงบประมาณใหม่`, 'setup', val);
+        db.ref('test_device').update({ budget_limit: parseFloat(val) }).then(() => {
+            hasAlertedBudget = false;
+            addNotificationToFirebase('ตั้งค่าระบบ', `ตั้งงบประมาณใหม่ ${val} บาท`, 'setup');
             document.getElementById('budget-input').value = "";
+            showToast();
         });
     }
 
@@ -253,12 +257,11 @@
         if(confirm("เริ่มนับหน่วยใหม่สำหรับเดือนนี้?")) {
             localTotalUnits = 0;
             db.ref('/').update({ total_units: 0 });
+            addNotificationToFirebase('ตั้งค่าระบบ', `รีเซ็ตหน่วยไฟฟ้าสะสม`, 'setup');
             showToast();
-            addNotificationToFirebase('ตั้งค่าระบบ', `รีเซ็ตหน่วยไฟฟ้าเป็น 0`, 'setup');
         }
     }
 
-    // ส่วน UI พื้นฐาน
     function analyzeAppliance(w) {
         const tbody = document.getElementById('appliance-table');
         let name = "สแตนด์บาย", status = "ประหยัด";
@@ -269,39 +272,37 @@
     }
 
     function exportData() {
-        const rows = [
-            ["หัวข้อ", "ค่าที่บันทึก"],
-            ["วันที่", new Date().toLocaleString()],
-            ["งบประมาณ", currentLimit],
-            ["ค่าไฟปัจจุบัน", calculatePEABill(localTotalUnits).toFixed(2)]
-        ];
+        const rows = [["หัวข้อ", "ค่า"], ["วันที่", new Date().toLocaleString()], ["Watt", lastWatt], ["หน่วย (kWh)", localTotalUnits.toFixed(5)], ["ยอดเงิน (บาท)", calculatePEABill(localTotalUnits).toFixed(2)]];
         let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
         const link = document.createElement("a");
         link.href = encodeURI(csv); link.download = `Paysave_Report.csv`;
-        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        link.click();
     }
 
-    function showToast() {
-        const t = document.getElementById('toast'); t.style.opacity = 1;
-        setTimeout(() => t.style.opacity = 0, 2000);
-    }
-
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
-    }
-
+    function showToast() { const t = document.getElementById('toast'); t.style.opacity = 1; setTimeout(() => t.style.opacity = 0, 2000); }
     function login() { navigate('dashboard-screen'); }
     function logout() { location.reload(); }
 
+    // 7. Initialize Charts
     document.addEventListener('DOMContentLoaded', () => {
+        // กราฟ Real-time (หน้า Dashboard)
         energyChart = new Chart(document.getElementById('energyChart'), {
             type: 'line',
             data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, backgroundColor: 'rgba(147, 112, 219, 0.1)', tension: 0.4 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
 
-        loadNotifications(); // โหลดข้อมูลแจ้งเตือนทันทีที่เปิดแอป
+        // กราฟแท่งรายวัน (หน้า Daily)
+        dailyChart = new Chart(document.getElementById('dailyChart'), {
+            type: 'bar',
+            data: { 
+                labels: ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00"], 
+                datasets: [{ label: 'kWh', data: [0, 0, 0, 0, 0, 0], backgroundColor: '#e67e22' }] 
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        loadNotifications();
         fetchData();
     });
 </script>
