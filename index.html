@@ -32,11 +32,8 @@
         .success-toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: white; padding: 10px 25px; border-radius: 30px; opacity: 0; transition: 0.5s; z-index: 9999; pointer-events: none; }
         .noti-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 10px; vertical-align: middle; margin-left: 5px; }
         .chart-box { position: relative; height: 250px; width: 100%; }
-        /* สไตล์สำหรับการแจ้งเตือนทั่วไป */
         .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; }
-        /* สไตล์สำหรับการแจ้งเตือนเมื่อเกินงบ (สีแดง) */
         .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
-        /* สไตล์สำหรับการตั้งงบ (สีม่วง) */
         .noti-item.setup { border-left-color: var(--primary); background: #f8f4ff; }
         .budget-info-tag { font-size: 0.75rem; color: var(--primary); font-weight: bold; margin-top: 5px; display: block; }
     </style>
@@ -105,6 +102,7 @@
         <div id="noti-list" class="card">
             <p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>
         </div>
+        <button class="btn btn-outline" style="margin-top: 10px;" onclick="clearNotiFirebase()">ล้างประวัติการแจ้งเตือน</button>
     </div>
 
     <div id="analysis-screen" class="screen">
@@ -131,8 +129,8 @@
         appId: "1:615707583064:web:93e21194a9a7b7da86602d"
     };
     firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    let notiCount = 0;
     let hasAlertedBudget = false;
     let currentLimit = 0;
     let energyChart;
@@ -153,20 +151,73 @@
         return (charge + 8.19 + (u * 0.0972)) * 1.07;
     }
 
+    // 1. ฟังก์ชันโหลดการแจ้งเตือนจาก Firebase มาแสดง
+    function loadNotifications() {
+        db.ref('notifications').limitToLast(10).on('value', (snapshot) => {
+            const list = document.getElementById('noti-list');
+            const badge = document.getElementById('noti-count');
+            list.innerHTML = "";
+            let count = 0;
+
+            if (snapshot.exists()) {
+                document.getElementById('no-noti').style.display = 'none';
+                const data = snapshot.val();
+                // เรียงจากใหม่ไปเก่า
+                Object.keys(data).reverse().forEach(key => {
+                    const item = data[key];
+                    const div = document.createElement('div');
+                    div.className = `noti-item ${item.type}`;
+                    div.innerHTML = `
+                        <strong>${item.title}</strong><br>
+                        ${item.message}
+                        ${item.limit ? `<span class="budget-info-tag">งบประมาณ: ${item.limit} บาท</span>` : ""}
+                        <small style="color:#999; display:block; margin-top:5px;">${item.time}</small>
+                    `;
+                    list.appendChild(div);
+                    count++;
+                });
+                badge.innerText = count;
+            } else {
+                list.innerHTML = '<p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>';
+                badge.innerText = "0";
+            }
+        });
+    }
+
+    // 2. ฟังก์ชันเพิ่มการแจ้งเตือนลง Firebase
+    function addNotificationToFirebase(title, message, type, limitValue = null) {
+        db.ref('notifications').push({
+            title: title,
+            message: message,
+            type: type,
+            limit: limitValue,
+            time: new Date().toLocaleString()
+        });
+        if(type === 'danger') alert(`🚨 ${title}: ${message}`);
+    }
+
+    function clearNotiFirebase() {
+        if(confirm("ล้างประวัติการแจ้งเตือนทั้งหมด?")) {
+            db.ref('notifications').remove();
+        }
+    }
+
     function fetchData() {
-        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json")
-        .then(res => res.json())
-        .then(data => {
+        db.ref('/').on('value', (snapshot) => {
+            const data = snapshot.val();
             if(!data) return;
+            
             lastWatt = data.current_watt || 0;
             currentLimit = data.test_device?.budget_limit || 0;
             document.getElementById('current-budget-label').innerText = currentLimit;
             
             if (localTotalUnits === null) localTotalUnits = data.total_units || 0;
-            const addedUnits = (lastWatt * (2 / 3600)) / 1000;
+            
+            // คำนวณเพิ่ม (เนื่องจากดึง Real-time ตลอดเวลา เราใช้ Logic บวกลดลงเล็กน้อย)
+            const addedUnits = (lastWatt * (1 / 3600)) / 1000; 
             localTotalUnits += addedUnits;
 
-            updateUnitsInFirebase(localTotalUnits);
+            db.ref('/').update({ total_units: localTotalUnits });
 
             const cost = calculatePEABill(localTotalUnits);
             document.getElementById('dash-watt').innerText = lastWatt;
@@ -175,68 +226,39 @@
 
             chartData.push(lastWatt);
             chartData.shift();
-            energyChart.update('none');
+            if(energyChart) energyChart.update('none');
 
             analyzeAppliance(lastWatt);
 
-            // แจ้งเตือนเมื่อเกินงบ
             if (currentLimit > 0 && cost >= currentLimit && !hasAlertedBudget) {
-                addNotification(`⚠️ ค่าไฟปัจจุบัน ${cost.toFixed(2)} บาท เกินงบที่ตั้งไว้!`, 'danger', currentLimit);
+                addNotificationToFirebase('เกินงบประมาณ', `ค่าไฟปัจจุบัน ${cost.toFixed(2)} บาท`, 'danger', currentLimit);
                 hasAlertedBudget = true;
             }
         });
     }
 
-    // ฟังก์ชันเพิ่มการแจ้งเตือนลงในหน้า List
-    function addNotification(message, type, limitValue = null) {
-        notiCount++;
-        document.getElementById('noti-count').innerText = notiCount;
-        document.getElementById('no-noti').style.display = 'none';
-        
-        const item = document.createElement('div');
-        item.className = `noti-item ${type}`; // กำหนดสีตามประเภท (danger, setup)
-        
-        let limitHtml = limitValue ? `<span class="budget-info-tag">งบประมาณ: ${limitValue} บาท</span>` : "";
-        
-        item.innerHTML = `
-            <strong>${type === 'danger' ? '🚨 เกินงบประมาณ' : '⚙️ ตั้งค่าระบบ'}</strong><br>
-            ${message}
-            ${limitHtml}
-            <small style="color:#999; display:block; margin-top:5px;">${new Date().toLocaleString()}</small>
-        `;
-        document.getElementById('noti-list').prepend(item);
-        
-        // ถ้าเป็นแจ้งเตือนแบบเกินงบ ให้ขึ้น Pop-up ด้วย
-        if(type === 'danger') {
-            alert(`🚨 PAY SAVE ALERT: ${message}`);
-        }
-    }
-
-    function updateUnitsInFirebase(val) {
-        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json", {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ total_units: val })
+    function saveBudget() {
+        const val = document.getElementById('budget-input').value;
+        if(!val) return;
+        db.ref('test_device').update({ budget_limit: parseFloat(val) })
+        .then(() => { 
+            hasAlertedBudget = false; 
+            showToast(); 
+            addNotificationToFirebase('ตั้งค่าระบบ', `เปลี่ยนงบประมาณใหม่`, 'setup', val);
+            document.getElementById('budget-input').value = "";
         });
     }
 
-    function exportData() {
-        const rows = [
-            ["หัวข้อ", "ค่าที่บันทึก"],
-            ["วันที่", new Date().toLocaleString()],
-            ["งบประมาณที่ตั้งไว้ (บาท)", currentLimit],
-            ["ค่าไฟปัจจุบัน (บาท)", calculatePEABill(localTotalUnits).toFixed(2)],
-            ["หน่วยสะสม (kWh)", localTotalUnits.toFixed(5)]
-        ];
-        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
-        const link = document.createElement("a");
-        link.href = encodeURI(csv);
-        link.download = `Paysave_Report.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+    function resetUnits() {
+        if(confirm("เริ่มนับหน่วยใหม่สำหรับเดือนนี้?")) {
+            localTotalUnits = 0;
+            db.ref('/').update({ total_units: 0 });
+            showToast();
+            addNotificationToFirebase('ตั้งค่าระบบ', `รีเซ็ตหน่วยไฟฟ้าเป็น 0`, 'setup');
+        }
     }
 
+    // ส่วน UI พื้นฐาน
     function analyzeAppliance(w) {
         const tbody = document.getElementById('appliance-table');
         let name = "สแตนด์บาย", status = "ประหยัด";
@@ -246,34 +268,21 @@
         tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${w} W</td></tr>`;
     }
 
-    // แก้ไขฟังก์ชันบันทึกงบประมาณให้เพิ่มข้อมูลในแจ้งเตือน
-    function saveBudget() {
-        const val = document.getElementById('budget-input').value;
-        if(!val) return;
-        
-        fetch("https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/.json", {
-            method: 'PATCH', body: JSON.stringify({ test_device: { budget_limit: parseFloat(val) } })
-        }).then(() => { 
-            hasAlertedBudget = false; 
-            showToast(); 
-            // เพิ่ม Log ในหน้าแจ้งเตือนเมื่อตั้งงบสำเร็จ
-            addNotification(`คุณได้ตั้งขีดจำกัดงบประมาณใหม่เรียบร้อยแล้ว`, 'setup', val);
-            document.getElementById('budget-input').value = "";
-        });
-    }
-
-    function resetUnits() {
-        if(confirm("เริ่มนับหน่วยใหม่สำหรับเดือนนี้?")) {
-            localTotalUnits = 0;
-            updateUnitsInFirebase(0);
-            showToast();
-            addNotification(`ทำการรีเซ็ตหน่วยไฟฟ้าสะสมเป็น 0 เริ่มต้นรอบบิลใหม่`, 'setup');
-        }
+    function exportData() {
+        const rows = [
+            ["หัวข้อ", "ค่าที่บันทึก"],
+            ["วันที่", new Date().toLocaleString()],
+            ["งบประมาณ", currentLimit],
+            ["ค่าไฟปัจจุบัน", calculatePEABill(localTotalUnits).toFixed(2)]
+        ];
+        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
+        const link = document.createElement("a");
+        link.href = encodeURI(csv); link.download = `Paysave_Report.csv`;
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
     }
 
     function showToast() {
-        const t = document.getElementById('toast');
-        t.style.opacity = 1;
+        const t = document.getElementById('toast'); t.style.opacity = 1;
         setTimeout(() => t.style.opacity = 0, 2000);
     }
 
@@ -292,8 +301,8 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
 
+        loadNotifications(); // โหลดข้อมูลแจ้งเตือนทันทีที่เปิดแอป
         fetchData();
-        setInterval(fetchData, 2000); 
     });
 </script>
 </body>
