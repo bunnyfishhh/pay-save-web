@@ -30,16 +30,22 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
         
-        /* เพิ่มใหม่: แถบแจ้งเตือนงบประมาณ */
         #budget-alert-bar { display: none; background: var(--danger); color: white; padding: 12px; text-align: center; border-radius: 10px; margin-bottom: 15px; font-weight: bold; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
 
         .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem; }
         .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
         .ai-badge { background: var(--info); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
+
+        /* เพิ่มใหม่: สไตล์สำหรับข้อความแจ้งเตือน (Toast) */
+        .toast-container { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 9999; }
+        .toast { background: rgba(0,0,0,0.8); color: white; padding: 12px 25px; border-radius: 30px; font-size: 0.9rem; margin-top: 10px; opacity: 0; transition: 0.3s; pointer-events: none; }
+        .toast.show { opacity: 1; }
     </style>
 </head>
 <body>
+
+<div class="toast-container" id="toast-container"></div>
 
 <div class="main-container">
     <div id="login-screen" class="screen active-screen">
@@ -58,7 +64,6 @@
 
     <div id="dashboard-screen" class="screen">
         <div id="budget-alert-bar">⚠️ คำเตือน: ขณะนี้การใช้ไฟเกินงบประมาณที่ตั้งไว้!</div>
-
         <div class="header-row"><h2>Dashboard</h2></div>
         <div class="grid-2">
             <div class="card" style="text-align: center;">
@@ -121,6 +126,7 @@
 </div>
 
 <script>
+    // การตั้งค่า Firebase เหมือนเดิม
     const firebaseConfig = {
         apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
         authDomain: "smart-money-meter.firebaseapp.com",
@@ -138,6 +144,24 @@
     let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1, budgetLimit = 0;
     let chartData = Array(15).fill(0);
 
+    // เพิ่มใหม่: ฟังก์ชันแสดงข้อความแจ้งเตือน (Toast)
+    function showToast(message) {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerText = message;
+        container.appendChild(toast);
+        
+        // บังคับให้เบราว์เซอร์รับรู้การสร้าง element ก่อนใส่ class show
+        setTimeout(() => toast.classList.add('show'), 100);
+        
+        // หายไปหลังจาก 3 วินาที
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => container.removeChild(toast), 300);
+        }, 3000);
+    }
+
     // AI Detection
     function analyzeAppliance(w) {
         const tbody = document.getElementById('appliance-table');
@@ -147,10 +171,9 @@
         else if (w >= 50 && w < 500) { name = "ตู้เย็น/ทีวี"; status = "ทำงาน"; }
         else if (w >= 500) { name = "แอร์/เตารีด"; status = "กินไฟสูง"; }
         aiStatus.innerText = name;
-        tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${w} W</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${w} W</td></tr>`;
     }
 
-    // แจ้งเตือน: บันทึกลง Firebase
     function addNotificationToFirebase(msg, type = 'info') {
         database.ref('notifications').push({
             message: msg,
@@ -159,14 +182,14 @@
         });
     }
 
-    // รีเซ็ตแจ้งเตือนใน Firebase
     function resetNotiData() {
         if(confirm("ต้องการล้างประวัติการแจ้งเตือนทั้งหมดใช่หรือไม่?")) {
-            database.ref('notifications').remove();
+            database.ref('notifications').remove().then(() => {
+                showToast("ล้างประวัติเรียบร้อยแล้ว");
+            });
         }
     }
 
-    // ฟังการเปลี่ยนแปลงแจ้งเตือนจาก Firebase (Persistence)
     database.ref('notifications').on('value', (snapshot) => {
         const list = document.getElementById('noti-list');
         const countDisplay = document.getElementById('noti-count');
@@ -188,7 +211,6 @@
         countDisplay.innerText = count;
     });
 
-    // Main Data Logic
     async function fetchData() {
         database.ref('/').on('value', async (snapshot) => {
             const data = snapshot.val();
@@ -207,12 +229,12 @@
             document.getElementById('dash-baht').innerText = currentCost.toFixed(2);
             document.getElementById('dash-budget').innerText = budgetLimit;
 
-            // ตรวจสอบงบประมาณ
             const alertBar = document.getElementById('budget-alert-bar');
             if (budgetLimit > 0 && currentCost >= budgetLimit) {
                 alertBar.style.display = "block";
                 if(!sessionStorage.getItem('budget_alert_sent')) {
                     addNotificationToFirebase(`ค่าไฟ ${currentCost.toFixed(2)} บ. เกินงบที่ตั้งไว้ ${budgetLimit} บ.`, 'danger');
+                    showToast("🚨 คำเตือน: ค่าไฟเกินงบประมาณ!");
                     sessionStorage.setItem('budget_alert_sent', 'true');
                 }
             } else {
@@ -250,20 +272,23 @@
         const rows = [["เวลา", "RATE A", "RATE B", "รวม"], ...Object.values(data).map(v => [v.time, v.rateA, v.rateB, v.total])];
         let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
         const link = document.createElement("a"); link.href = encodeURI(csv); link.download = `Paysave_${date}.csv`; link.click();
+        showToast("กำลังดาวน์โหลดรายงาน...");
     }
 
+    // ปรับปรุงฟังก์ชันบันทึกงบประมาณ
     function saveBudget() {
         const val = parseFloat(document.getElementById('budget-input').value);
         if(!val) return;
-        database.ref('test_device').update({ budget_limit: val });
-        addNotificationToFirebase(`ตั้งเป้างบประมาณใหม่ที่ ${val} บาท`, 'info');
-        alert("บันทึกงบประมาณสำเร็จ");
+        database.ref('test_device').update({ budget_limit: val }).then(() => {
+            addNotificationToFirebase(`ตั้งเป้างบประมาณใหม่ที่ ${val} บาท`, 'info');
+            showToast("✅ บันทึกงบประมาณเรียบร้อยแล้ว");
+        });
     }
 
     function navigate(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); document.getElementById(id).classList.add('active-screen'); }
-    function login() { navigate('dashboard-screen'); }
-    function loginWithGoogle() { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => navigate('dashboard-screen')).catch(e => alert(e.message)); }
-    function logout() { auth.signOut().then(() => location.reload()); }
+    function login() { navigate('dashboard-screen'); showToast("ยินดีต้อนรับเข้าสู่ระบบ"); }
+    function loginWithGoogle() { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => { navigate('dashboard-screen'); showToast("ลงชื่อเข้าใช้สำเร็จ"); }).catch(e => alert(e.message)); }
+    function logout() { auth.signOut().then(() => { location.reload(); }); }
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
