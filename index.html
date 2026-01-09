@@ -8,6 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #9370DB; --secondary: #e67e22; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card: #ffffff; --info: #17a2b8; }
         body { font-family: 'Kanit', sans-serif; margin: 0; background-color: var(--bg); color: #333; }
@@ -18,19 +19,15 @@
         .card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
-        .metric-label { font-size: 0.9rem; color: #666; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        .btn-google { background: #4285F4; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
-        .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
+        .btn-danger { background: var(--danger); color: white; }
         .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; }
-        .chart-box { position: relative; height: 180px; width: 100%; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem; }
+        #budget-alert-bar { display: none; background: var(--danger); color: white; padding: 12px; text-align: center; border-radius: 10px; margin-bottom: 15px; font-weight: bold; }
+        .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; position: relative; }
         .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
-        .ai-badge { background: var(--info); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
+        .noti-time { font-size: 0.75rem; color: #888; display: block; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -39,79 +36,52 @@
     <div id="login-screen" class="screen active-screen">
         <div class="card" style="max-width: 400px; margin: 80px auto; text-align: center;">
             <h1 style="color: var(--primary); font-size: 3rem; margin: 0;">PAY SAVE</h1>
-            <p style="color: #666; margin-bottom: 30px;">AI Energy Identification System</p>
-            <input type="text" id="email-input" class="input-field" placeholder="อีเมล" value="user@paysave.com">
-            <input type="password" id="password-input" class="input-field" placeholder="รหัสผ่าน" value="123456">
-            <button class="btn btn-main" onclick="login()">เข้าสู่ระบบ</button>
-            <p style="margin: 10px 0;">หรือ</p>
-            <button class="btn btn-google" onclick="loginWithGoogle()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18"> เข้าใช้งานด้วย Google
-            </button>
+            <button class="btn btn-main" onclick="loginWithGoogle()">เข้าใช้งานด้วย Google</button>
         </div>
     </div>
 
     <div id="dashboard-screen" class="screen">
+        <div id="budget-alert-bar">⚠️ เกินงบประมาณที่ตั้งไว้!</div>
         <div class="header-row"><h2>Dashboard</h2></div>
         <div class="grid-2">
             <div class="card" style="text-align: center;">
-                <p style="font-weight:bold;">สถานะปัจจุบัน <span id="ai-status" class="ai-badge">AI กำลังวิเคราะห์...</span></p>
+                <p style="font-weight:bold;">สถานะ: <span id="ai-status" style="color:var(--info);">กำลังวิเคราะห์...</span></p>
                 <div style="display: flex; justify-content: space-around;">
-                    <div><p id="dash-watt" class="metric-value">0</p><p class="metric-label">Watts</p></div>
-                    <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p class="metric-label">บาทสะสม (PEA)</p></div>
+                    <div><p id="dash-watt" class="metric-value">0</p><p>Watts</p></div>
+                    <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p>บาทสะสม</p></div>
                 </div>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.0000</span> kWh</p>
+                <p style="font-size: 0.8rem; margin-top:10px;">งบประมาณ: <span id="dash-budget">0</span> บาท</p>
             </div>
-            <div class="card">
-                <div class="chart-box"><canvas id="energyChart"></canvas></div>
-            </div>
+            <div class="card"><canvas id="energyChart" style="height:180px;"></canvas></div>
         </div>
         <div class="btn-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button class="btn btn-outline" onclick="navigate('daily-screen')">⚡ สถิติรายวัน</button>
-            <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 รายงาน & Export</button>
-            <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน <span id="noti-count" style="color:red;">0</span></button>
-            <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 วิเคราะห์อุปกรณ์</button>
+            <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน (<span id="noti-count">0</span>)</button>
+            <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 จัดการข้อมูล</button>
         </div>
-        <button class="btn btn-main" style="background: var(--danger); margin-top: 20px;" onclick="logout()">ออกจากระบบ</button>
-    </div>
-
-    <div id="analysis-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>AI วิเคราะห์อุปกรณ์</h2></div>
-        <div class="card">
-            <table>
-                <thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>สถานะ</th><th>Watt</th></tr></thead>
-                <tbody id="appliance-table"></tbody>
-            </table>
-        </div>
+        <button class="btn btn-main" style="background:var(--danger);" onclick="logout()">ออกจากระบบ</button>
     </div>
 
     <div id="noti-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>การแจ้งเตือน</h2></div>
-        <div id="noti-list" class="card">
-            <p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>
+        <div class="header-row">
+            <span style="cursor:pointer; font-size: 20px;" onclick="navigate('dashboard-screen')">← ย้อนกลับ</span>
+            <h2>การแจ้งเตือนจากฐานข้อมูล</h2>
         </div>
+        <div id="noti-list" style="margin-top: 10px;"></div>
+        <button class="btn btn-danger" onclick="clearNotifications()">🗑️ ลบประวัติการแจ้งเตือนทั้งหมด</button>
     </div>
 
     <div id="billing-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>รายงานกิโลวัตต์ชั่วโมง</h2></div>
+        <div class="header-row"><span style="cursor:pointer;" onclick="navigate('dashboard-screen')">← ย้อนกลับ</span><h2>ตั้งค่า & Export</h2></div>
         <div class="card">
-            <p style="font-weight: bold;">📥 เลือกวันที่ดาวน์โหลดรายงาน (CSV)</p>
-            <input type="date" id="date-picker" class="input-field">
-            <button class="btn btn-main" style="background: var(--success);" onclick="exportHistoryDataByDate()">ดาวน์โหลด CSV ของวันที่เลือก</button>
+            <p>ตั้งงบประมาณ (บาท)</p>
+            <input type="number" id="budget-input" class="input-field" placeholder="ตัวอย่าง: 500">
+            <button class="btn btn-main" onclick="saveBudget()">บันทึกงบประมาณ</button>
         </div>
-        <div class="card">
-            <p style="font-weight: bold;">ตั้งงบประมาณ (บาท)</p>
-            <input type="number" id="budget-input" class="input-field" placeholder="ระบุงบ">
-            <button class="btn btn-main" onclick="saveBudget()">บันทึกเป้าหมาย</button>
-        </div>
-    </div>
-
-    <div id="daily-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
-        <div class="card" style="height: 350px;"><canvas id="dailyChart"></canvas></div>
     </div>
 </div>
 
 <script>
+    // 1. Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
         authDomain: "smart-money-meter.firebaseapp.com",
@@ -122,100 +92,117 @@
         appId: "1:615707583064:web:93e21194a9a7b7da86602d"
     };
     firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
     const auth = firebase.auth();
-    const dbUrl = firebaseConfig.databaseURL + "/";
 
-    let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
-    let chartData = Array(15).fill(0), notiCount = 0;
+    let localTotalUnits = null, energyChart, budgetLimit = 0;
+    let chartData = Array(15).fill(0);
 
-    // AI Detection
-    function analyzeAppliance(w) {
-        const tbody = document.getElementById('appliance-table');
-        const aiStatus = document.getElementById('ai-status');
-        let name = "สแตนด์บาย", status = "ปกติ";
-        
-        if (w > 10 && w < 50) { name = "ไฟ/พัดลม"; status = "เปิดอยู่"; }
-        else if (w >= 50 && w < 500) { name = "ตู้เย็น/ทีวี"; status = "ทำงาน"; }
-        else if (w >= 500) { name = "แอร์/เตารีด"; status = "กินไฟสูง"; }
-        
-        aiStatus.innerText = name;
-        tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${w} W</td></tr>`;
-    }
-
-    // แจ้งเตือน
-    function addNotification(msg, type = 'info') {
+    // 2. ระบบดึง Notification จาก Firebase (จำค่าถาวร)
+    database.ref('notifications').on('value', (snapshot) => {
         const list = document.getElementById('noti-list');
-        const emptyMsg = document.getElementById('no-noti');
-        if (emptyMsg) emptyMsg.style.display = 'none';
+        const countDisplay = document.getElementById('noti-count');
+        list.innerHTML = "";
+        let count = 0;
         
-        notiCount++;
-        document.getElementById('noti-count').innerText = notiCount;
-        
-        const div = document.createElement('div');
-        div.className = `noti-item ${type}`;
-        div.innerHTML = `<strong>แจ้งเตือน:</strong> ${msg} <br><small>${new Date().toLocaleTimeString()}</small>`;
-        list.prepend(div);
+        snapshot.forEach((child) => {
+            const data = child.val();
+            const div = document.createElement('div');
+            div.className = `noti-item ${data.type === 'danger' ? 'danger' : ''}`;
+            div.innerHTML = `<strong>${data.title}</strong><br>${data.message}<span class="noti-time">${data.time}</span>`;
+            list.prepend(div); // เอาอันใหม่ขึ้นบน
+            count++;
+        });
+        countDisplay.innerText = count;
+        if(count === 0) list.innerHTML = "<p style='text-align:center;color:#999;'>ไม่มีประวัติการแจ้งเตือน</p>";
+    });
+
+    // 3. ฟังก์ชันเพิ่มแจ้งเตือนลง Firebase
+    function sendNotificationToFirebase(title, message, type) {
+        database.ref('notifications').push({
+            title: title,
+            message: message,
+            type: type,
+            time: new Date().toLocaleString('th-TH')
+        });
     }
 
-    // Main Data Logic
-    async function fetchData() {
-        try {
-            const res = await fetch(`${dbUrl}.json`);
-            const data = await res.json();
+    // 4. ปุ่ม Reset (ลบประวัติในฐานข้อมูล)
+    function clearNotifications() {
+        if(confirm("คุณต้องการลบประวัติการแจ้งเตือนทั้งหมดในฐานข้อมูลใช่หรือไม่?")) {
+            database.ref('notifications').remove();
+        }
+    }
+
+    // 5. Main Fetch Data
+    function startSync() {
+        database.ref('/').on('value', (snapshot) => {
+            const data = snapshot.val();
             if(!data) return;
 
-            lastWatt = data.current_watt || 0;
+            const watt = data.current_watt || 0;
+            budgetLimit = data.test_device?.budget_limit || 0;
             if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
-            localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
-            fetch(`${dbUrl}.json`, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
 
-            const now = new Date();
-            if (now.getMinutes() % 5 === 0 && now.getMinutes() !== lastLogMinute) {
-                logToRate(lastWatt, localTotalUnits, now);
-                lastLogMinute = now.getMinutes();
+            // คำนวณหน่วยสะสม
+            localTotalUnits += (watt * (2 / 3600)) / 1000;
+            database.ref('/').update({ total_units: localTotalUnits });
+
+            const currentCost = (localTotalUnits * 4.42);
+            document.getElementById('dash-watt').innerText = watt;
+            document.getElementById('dash-baht').innerText = currentCost.toFixed(2);
+            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
+            document.getElementById('dash-budget').innerText = budgetLimit;
+
+            // ตรวจสอบงบประมาณ
+            const alertBar = document.getElementById('budget-alert-bar');
+            if (budgetLimit > 0 && currentCost >= budgetLimit) {
+                alertBar.style.display = "block";
+                // ส่งแจ้งเตือนเข้า Firebase (ป้องกันส่งซ้ำด้วย Session)
+                if(!sessionStorage.getItem('alert_sent')) {
+                    sendNotificationToFirebase("🚨 เกินงบประมาณ!", `ค่าไฟปัจจุบัน ${currentCost.toFixed(2)} บาท เกินเป้าหมาย ${budgetLimit} บาท`, "danger");
+                    sessionStorage.setItem('alert_sent', 'true');
+                }
+            } else {
+                alertBar.style.display = "none";
+                sessionStorage.removeItem('alert_sent');
             }
 
-            document.getElementById('dash-watt').innerText = lastWatt;
-            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
-            document.getElementById('dash-baht').innerText = (localTotalUnits * 4.42).toFixed(2);
-
-            chartData.push(lastWatt);
+            chartData.push(watt);
             chartData.shift();
-            energyChart.update('none');
-            analyzeAppliance(lastWatt);
-        } catch (e) { console.error(e); }
+            if(energyChart) energyChart.update('none');
+        });
     }
 
-    async function logToRate(watt, unit, now) {
-        const dateKey = now.toISOString().split('T')[0];
-        const timeStr = now.getHours().toString().padStart(2, '0') + "." + now.getMinutes().toString().padStart(2, '0');
-        let rateA = 0, rateB = 0;
-        if (now.getHours() >= 9 && now.getHours() < 22) rateA = unit; else rateB = unit;
-        await fetch(`${dbUrl}history/${dateKey}.json`, { method: 'POST', body: JSON.stringify({ time: timeStr, rateA: rateA.toFixed(2), rateB: rateB.toFixed(2), total: unit.toFixed(2) }) });
+    // 6. Helper Functions
+    function saveBudget() {
+        const val = parseFloat(document.getElementById('budget-input').value);
+        if(!val) return;
+        database.ref('test_device').update({ budget_limit: val });
+        sendNotificationToFirebase("⚙️ ตั้งค่า", `เปลี่ยนงบประมาณเป็น ${val} บาท`, "info");
+        alert("บันทึกงบประมาณสำเร็จ");
     }
 
-    async function exportHistoryDataByDate() {
-        const date = document.getElementById('date-picker').value;
-        if (!date) return alert("เลือกวันที่");
-        const res = await fetch(`${dbUrl}history/${date}.json`);
-        const data = await res.json();
-        if(!data) return alert("ไม่มีข้อมูล");
-        const rows = [["เวลา", "RATE A", "RATE B", "รวม"], ...Object.values(data).map(v => [v.time, v.rateA, v.rateB, v.total])];
-        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
-        const link = document.createElement("a"); link.href = encodeURI(csv); link.download = `Paysave_${date}.csv`; link.click();
+    function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then(() => navigate('dashboard-screen')).catch(e => alert(e.message));
     }
 
-    function saveBudget() { addNotification("บันทึกงบประมาณสำเร็จ", "info"); alert("บันทึกแล้ว"); }
-    function navigate(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); document.getElementById(id).classList.add('active-screen'); }
-    function login() { navigate('dashboard-screen'); }
-    function loginWithGoogle() { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => navigate('dashboard-screen')).catch(e => alert(e.message)); }
+    function navigate(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+        document.getElementById(id).classList.add('active-screen');
+    }
+
     function logout() { auth.signOut().then(() => location.reload()); }
 
     document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
-        energyChart = new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } } });
-        dailyChart = new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ["00:00", "06:00", "12:00", "18:00"], datasets: [{ label: 'kWh', data: [0.2, 0.5, 0.8, 0.4], backgroundColor: '#9370DB' }] }, options: { responsive: true, maintainAspectRatio: false } });
-        setInterval(fetchData, 2000);
+        const ctx = document.getElementById('energyChart').getContext('2d');
+        energyChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, tension: 0.4 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+        });
+        startSync();
     });
 </script>
 </body>
