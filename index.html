@@ -21,7 +21,9 @@
         .metric-label { font-size: 0.9rem; color: #666; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        .btn-google { background: #4285F4; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        /* ปรับแต่งปุ่ม Google ให้มีสไตล์ตามมาตรฐาน */
+        .btn-google { background: #ffffff; color: #757575; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-google:hover { background: #f8f9fa; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
         .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; }
@@ -46,8 +48,10 @@
             <input type="password" id="password-input" class="input-field" placeholder="รหัสผ่าน" value="123456">
             <button class="btn btn-main" onclick="login()">เข้าสู่ระบบ</button>
             <p style="margin: 10px 0;">หรือ</p>
+            
             <button class="btn btn-google" onclick="loginWithGoogle()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18"> เข้าใช้งานด้วย Google
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cGF0aCBmaWxsPSIjRkZDOTAwIiBkPSJNMzguMTIgMjQuNDVjMC0xLjQxLS4xMi0yLjc3LS4zNC00LjA5SDI0djguMjhoNy45MmMtLjM0IDEuODMtMS4zOCAzLjM3LTIuOTQgNC40MWw0LjcxIDMuNjVjMi43Ni0yLjU0IDQuMzUtNi4yOSA0LjM1LTEwLjI1eiIvPjxwYXRoIGZpbGw9IiM0QjhGRjAiIGQ9Ik0yNCA0OGM2LjQ4IDAgMTEuOTEtMi4xNSAxNS44Ny01LjgzbC03LjI4LTUuNjVjLTIuMDEgMS4zNS00LjU5IDIuMTUtOC41OSAyLjE1LTUuOTMgMC0xMC45NC00LjAxLTEyLjc0LTkuNEg0LjE0djYuMjVDOC4xMyA0Mi44MyAxNS41NiA0OCAyNCA0OHoiLz48cGF0aCBmaWxsPSIjNDhBODVGIiBkPSJNMTEuMjYgMjkuMzVjLS40NS0xLjM1LS43MS0yLjc5LS43MS00LjM1cy4yNi0zIDEuNzEtNC4zNVYxNC40SDQuMTRjLTEuNTkgMy4xOC0yLjQ5IDYuNzMtMi40OSA5LjZzLjkgNi40MiAyLjQ5IDkuNmw3LjEyLTUuNjV6Ii8+PHBhdGggZmlsbD0iI0VTMjcyNyIgZD0iTTI0IDkuN2M0LjI3IDAgNy42IDEuODUgOS4yMiAzLjRsNi44OS02LjljLTQuMjYtMy45Ny05LjktNi4yLTMxLjk5IDAsLTUuODcgOS42OS04Ljk2IDguNjktMTIuMjlMNCAxNC40bDEyLjc0IDkuNEgxMS4yNnoiLz48L3N2Zz4=" width="20">
+                <span>เข้าใช้งานด้วย Google</span>
             </button>
         </div>
     </div>
@@ -57,9 +61,7 @@
             <h2>Dashboard</h2>
             <button class="btn btn-outline" style="width: auto;" onclick="logout()">ออกจากระบบ</button>
         </div>
-        
         <div id="budget-alert-banner" class="alert-banner">⚠️ คำเตือน: ค่าไฟเกินงบประมาณที่ตั้งไว้!</div>
-
         <div class="grid-2">
             <div class="card" style="text-align: center;">
                 <p style="font-weight:bold;">สถานะปัจจุบัน <span id="ai-status" class="ai-badge">AI กำลังวิเคราะห์...</span></p>
@@ -129,7 +131,35 @@
     let chartData = Array(15).fill(0), notiCount = 0, userBudget = localStorage.getItem('paysave_budget') || 0;
     let hasAlertedBudget = false;
 
-    // ระบบ Logic เชื่อมต่อข้อมูลจริง
+    // ระบบ Login และเก็บข้อมูลผู้ใช้หลังบ้าน
+    function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then((result) => {
+            const user = result.user;
+            
+            // เตรียมข้อมูลที่จะเก็บลงฐานข้อมูลหลังบ้าน
+            const userData = {
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+                lastLogin: new Date().toLocaleString('th-TH'),
+                uid: user.uid
+            };
+
+            // บันทึกข้อมูลลงโฟลเดอร์ users โดยใช้ UID ของผู้ใช้เป็นชื่อไฟล์
+            fetch(`${dbUrl}users/${user.uid}.json`, {
+                method: 'PATCH',
+                body: JSON.stringify(userData)
+            })
+            .then(() => {
+                console.log("บันทึกข้อมูลผู้ใช้เรียบร้อย");
+                navigate('dashboard-screen');
+            })
+            .catch(err => console.error("Error saving user:", err));
+
+        }).catch(e => alert("เกิดข้อผิดพลาด: " + e.message));
+    }
+
     async function fetchData() {
         try {
             const res = await fetch(`${dbUrl}.json`);
@@ -170,11 +200,9 @@
     async function logToRate(watt, unit, now) {
         const dateKey = now.toISOString().split('T')[0];
         const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-        let rateA = 0, rateB = 0;
-        if (now.getHours() >= 9 && now.getHours() < 22) rateA = unit; else rateB = unit;
         await fetch(`${dbUrl}history/${dateKey}.json`, { 
             method: 'POST', 
-            body: JSON.stringify({ time: timeStr, watt: watt, rateA: rateA.toFixed(4), rateB: rateB.toFixed(4), total: unit.toFixed(4) }) 
+            body: JSON.stringify({ time: timeStr, watt: watt, rateA: unit.toFixed(4), rateB: 0, total: unit.toFixed(4) }) 
         });
     }
 
@@ -268,10 +296,6 @@
     }
 
     function login() { navigate('dashboard-screen'); }
-    function loginWithGoogle() { 
-        const provider = new firebase.auth.GoogleAuthProvider(); 
-        auth.signInWithPopup(provider).then(() => navigate('dashboard-screen')).catch(e => alert(e.message)); 
-    }
     function logout() { auth.signOut().then(() => location.reload()); }
 
     document.addEventListener('DOMContentLoaded', () => {
