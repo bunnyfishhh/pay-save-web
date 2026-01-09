@@ -8,7 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
     <style>
         :root { --primary: #9370DB; --secondary: #e67e22; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card: #ffffff; --info: #17a2b8; }
         body { font-family: 'Kanit', sans-serif; margin: 0; background-color: var(--bg); color: #333; }
@@ -20,7 +19,7 @@
         .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
         .metric-label { font-size: 0.9rem; color: #666; }
-        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; position: relative; }
+        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
         .btn-google { background: #4285F4; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
@@ -29,29 +28,9 @@
         .chart-box { position: relative; height: 180px; width: 100%; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        
-        #budget-alert-bar { display: none; background: var(--danger); color: white; padding: 12px; text-align: center; border-radius: 10px; margin-bottom: 15px; font-weight: bold; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
-
         .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem; }
         .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
         .ai-badge { background: var(--info); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
-
-        /* เพิ่มใหม่: ตัวเลขแจ้งเตือนสีแดง (Badge) */
-        .noti-badge-icon {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--danger);
-            color: white;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            font-size: 12px;
-            display: none; /* ซ่อนไว้ถ้าเป็น 0 */
-            align-items: center;
-            justify-content: center;
-        }
     </style>
 </head>
 <body>
@@ -72,8 +51,6 @@
     </div>
 
     <div id="dashboard-screen" class="screen">
-        <div id="budget-alert-bar">⚠️ คำเตือน: ขณะนี้การใช้ไฟเกินงบประมาณที่ตั้งไว้!</div>
-
         <div class="header-row"><h2>Dashboard</h2></div>
         <div class="grid-2">
             <div class="card" style="text-align: center;">
@@ -82,7 +59,7 @@
                     <div><p id="dash-watt" class="metric-value">0</p><p class="metric-label">Watts</p></div>
                     <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p class="metric-label">บาทสะสม (PEA)</p></div>
                 </div>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.0000</span> kWh | งบ: <span id="dash-budget">0</span> บาท</p>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.0000</span> kWh</p>
             </div>
             <div class="card">
                 <div class="chart-box"><canvas id="energyChart"></canvas></div>
@@ -91,9 +68,7 @@
         <div class="btn-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <button class="btn btn-outline" onclick="navigate('daily-screen')">⚡ สถิติรายวัน</button>
             <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 รายงาน & Export</button>
-            <button class="btn btn-outline" onclick="navigate('noti-screen')">
-                🔔 แจ้งเตือน <div id="noti-badge-ui" class="noti-badge-icon">0</div>
-            </button>
+            <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน <span id="noti-count" style="color:red;">0</span></button>
             <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 วิเคราะห์อุปกรณ์</button>
         </div>
         <button class="btn btn-main" style="background: var(--danger); margin-top: 20px;" onclick="logout()">ออกจากระบบ</button>
@@ -101,13 +76,19 @@
 
     <div id="analysis-screen" class="screen">
         <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>AI วิเคราะห์อุปกรณ์</h2></div>
-        <div class="card"><table><thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>สถานะ</th><th>Watt</th></tr></thead><tbody id="appliance-table"></tbody></table></div>
+        <div class="card">
+            <table>
+                <thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>สถานะ</th><th>Watt</th></tr></thead>
+                <tbody id="appliance-table"></tbody>
+            </table>
+        </div>
     </div>
 
     <div id="noti-screen" class="screen">
         <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>การแจ้งเตือน</h2></div>
-        <div id="noti-list" class="card"><p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p></div>
-        <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger);" onclick="resetNotiData()">🗑️ ล้างประวัติการแจ้งเตือนทั้งหมด</button>
+        <div id="noti-list" class="card">
+            <p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>
+        </div>
     </div>
 
     <div id="billing-screen" class="screen">
@@ -142,99 +123,51 @@
     };
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
-    const database = firebase.database();
     const dbUrl = firebaseConfig.databaseURL + "/";
 
-    let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1, budgetLimit = 0;
-    let chartData = Array(15).fill(0);
+    let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
+    let chartData = Array(15).fill(0), notiCount = 0;
 
-    // ฟังก์ชันวิเคราะห์ (คงเดิม)
+    // AI Detection
     function analyzeAppliance(w) {
         const tbody = document.getElementById('appliance-table');
         const aiStatus = document.getElementById('ai-status');
         let name = "สแตนด์บาย", status = "ปกติ";
+        
         if (w > 10 && w < 50) { name = "ไฟ/พัดลม"; status = "เปิดอยู่"; }
         else if (w >= 50 && w < 500) { name = "ตู้เย็น/ทีวี"; status = "ทำงาน"; }
         else if (w >= 500) { name = "แอร์/เตารีด"; status = "กินไฟสูง"; }
-        aiStatus.innerText = name;
-        if(tbody) tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${w} W</td></tr>`;
-    }
-
-    // ฟังก์ชันแจ้งเตือน: บันทึกลง Firebase (คงเดิม)
-    function addNotificationToFirebase(msg, type = 'info') {
-        database.ref('notifications').push({
-            message: msg,
-            type: type,
-            time: new Date().toLocaleString('th-TH')
-        });
-    }
-
-    // ปุ่มล้างแจ้งเตือน (คงเดิม)
-    function resetNotiData() {
-        if(confirm("ต้องการล้างประวัติการแจ้งเตือนทั้งหมดใช่หรือไม่?")) {
-            database.ref('notifications').remove();
-        }
-    }
-
-    // ฟังการเปลี่ยนแปลงจาก Firebase และอัปเดต Badge ทันที
-    database.ref('notifications').on('value', (snapshot) => {
-        const list = document.getElementById('noti-list');
-        const badgeUI = document.getElementById('noti-badge-ui');
-        let count = 0;
-        if (list) list.innerHTML = "";
         
-        if (snapshot.exists()) {
-            document.getElementById('no-noti').style.display = 'none';
-            snapshot.forEach((child) => {
-                const data = child.val();
-                if (list) {
-                    const div = document.createElement('div');
-                    div.className = `noti-item ${data.type}`;
-                    div.innerHTML = `<strong>${data.time}</strong>: ${data.message}`;
-                    list.prepend(div);
-                }
-                count++;
-            });
-            // อัปเดตตัวเลขแจ้งเตือนบนปุ่ม
-            badgeUI.innerText = count;
-            badgeUI.style.display = "flex";
-        } else {
-            if (list) list.innerHTML = '<p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>';
-            badgeUI.style.display = "none";
-        }
-    });
+        aiStatus.innerText = name;
+        tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${w} W</td></tr>`;
+    }
 
-    // Main Sync Logic (ดึงข้อมูลจาก Firebase คลุมทั้งวัน)
+    // แจ้งเตือน
+    function addNotification(msg, type = 'info') {
+        const list = document.getElementById('noti-list');
+        const emptyMsg = document.getElementById('no-noti');
+        if (emptyMsg) emptyMsg.style.display = 'none';
+        
+        notiCount++;
+        document.getElementById('noti-count').innerText = notiCount;
+        
+        const div = document.createElement('div');
+        div.className = `noti-item ${type}`;
+        div.innerHTML = `<strong>แจ้งเตือน:</strong> ${msg} <br><small>${new Date().toLocaleTimeString()}</small>`;
+        list.prepend(div);
+    }
+
+    // Main Data Logic
     async function fetchData() {
-        database.ref('/').on('value', async (snapshot) => {
-            const data = snapshot.val();
+        try {
+            const res = await fetch(`${dbUrl}.json`);
+            const data = await res.json();
             if(!data) return;
 
             lastWatt = data.current_watt || 0;
-            budgetLimit = data.test_device?.budget_limit || 0;
             if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
-
             localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
-            database.ref('/').update({ total_units: localTotalUnits });
-
-            const currentCost = (localTotalUnits * 4.42);
-            document.getElementById('dash-watt').innerText = lastWatt;
-            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
-            document.getElementById('dash-baht').innerText = currentCost.toFixed(2);
-            document.getElementById('dash-budget').innerText = budgetLimit;
-
-            // ตรวจสอบงบประมาณ
-            const alertBar = document.getElementById('budget-alert-bar');
-            if (budgetLimit > 0 && currentCost >= budgetLimit) {
-                alertBar.style.display = "block";
-                if(!sessionStorage.getItem('budget_alert_sent')) {
-                    addNotificationToFirebase(`ค่าไฟ ${currentCost.toFixed(2)} บ. เกินงบที่ตั้งไว้ ${budgetLimit} บ.`, 'danger');
-                    sessionStorage.setItem('budget_alert_sent', 'true');
-                }
-            } else {
-                alertBar.style.display = "none";
-                sessionStorage.removeItem('budget_alert_sent');
-            }
+            fetch(`${dbUrl}.json`, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
 
             const now = new Date();
             if (now.getMinutes() % 5 === 0 && now.getMinutes() !== lastLogMinute) {
@@ -242,11 +175,15 @@
                 lastLogMinute = now.getMinutes();
             }
 
+            document.getElementById('dash-watt').innerText = lastWatt;
+            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
+            document.getElementById('dash-baht').innerText = (localTotalUnits * 4.42).toFixed(2);
+
             chartData.push(lastWatt);
             chartData.shift();
             energyChart.update('none');
             analyzeAppliance(lastWatt);
-        });
+        } catch (e) { console.error(e); }
     }
 
     async function logToRate(watt, unit, now) {
@@ -268,14 +205,7 @@
         const link = document.createElement("a"); link.href = encodeURI(csv); link.download = `Paysave_${date}.csv`; link.click();
     }
 
-    function saveBudget() {
-        const val = parseFloat(document.getElementById('budget-input').value);
-        if(!val) return;
-        database.ref('test_device').update({ budget_limit: val });
-        addNotificationToFirebase(`ตั้งเป้างบประมาณใหม่ที่ ${val} บาท`, 'info');
-        alert("บันทึกงบประมาณสำเร็จ");
-    }
-
+    function saveBudget() { addNotification("บันทึกงบประมาณสำเร็จ", "info"); alert("บันทึกแล้ว"); }
     function navigate(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); document.getElementById(id).classList.add('active-screen'); }
     function login() { navigate('dashboard-screen'); }
     function loginWithGoogle() { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(() => navigate('dashboard-screen')).catch(e => alert(e.message)); }
@@ -285,7 +215,7 @@
         document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
         energyChart = new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } } });
         dailyChart = new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ["00:00", "06:00", "12:00", "18:00"], datasets: [{ label: 'kWh', data: [0.2, 0.5, 0.8, 0.4], backgroundColor: '#9370DB' }] }, options: { responsive: true, maintainAspectRatio: false } });
-        fetchData();
+        setInterval(fetchData, 2000);
     });
 </script>
 </body>
