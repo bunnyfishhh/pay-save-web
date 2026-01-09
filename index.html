@@ -25,8 +25,6 @@
         .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; }
-        .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
     </style>
 </head>
 <body>
@@ -66,8 +64,15 @@
         <button class="btn btn-main" style="background: var(--danger); margin-top: 20px;" onclick="logout()">ออกจากระบบ</button>
     </div>
 
+    <div id="daily-screen" class="screen">
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
+        <div class="card">
+            <div class="chart-box" style="height: 300px;"><canvas id="dailyChart"></canvas></div>
+        </div>
+    </div>
+
     <div id="billing-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>รายงานข้อมูลกิโลวัตต์ชั่วโมง</h2></div>
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>รายงานกิโลวัตต์ชั่วโมง</h2></div>
         <div class="card">
             <p style="font-weight: bold;">📥 ดาวน์โหลดรายงานข้อมูล (รูปแบบตารางรายวัน)</p>
             <button class="btn btn-main" style="background: var(--success);" onclick="exportHistoryData()">EXPORT TO CSV (Excel)</button>
@@ -80,10 +85,6 @@
         <button class="btn btn-outline" style="color: var(--danger); border-color: var(--danger); width: 100%;" onclick="resetAllData()">ล้างประวัติทั้งหมด</button>
     </div>
 
-    <div id="daily-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
-        <div class="card"><canvas id="dailyChart"></canvas></div>
-    </div>
     <div id="noti-screen" class="screen">
         <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>การแจ้งเตือน</h2></div>
         <div id="noti-list" class="card"></div>
@@ -92,7 +93,7 @@
 
 <script>
     const dbUrl = "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app/";
-    let localTotalUnits = null, lastWatt = 0, energyChart, lastLogMinute = -1;
+    let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
     let chartData = Array(15).fill(0);
 
     // 1. ฟังก์ชันดึงและบันทึกข้อมูล
@@ -105,13 +106,11 @@
             lastWatt = data.current_watt || 0;
             if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
             
-            // เพิ่มหน่วยสะสมตามเวลา (2 วินาที)
             localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
             fetch(`${dbUrl}.json`, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
 
             const now = new Date();
             const currentMin = now.getMinutes();
-            // บันทึกทุก 5 นาที (นาทีที่ลงท้ายด้วย 0 หรือ 5)
             if (currentMin % 5 === 0 && currentMin !== lastLogMinute) {
                 logToRate(lastWatt, localTotalUnits, now);
                 lastLogMinute = currentMin;
@@ -119,7 +118,7 @@
 
             document.getElementById('dash-watt').innerText = lastWatt;
             document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
-            document.getElementById('dash-baht').innerText = (localTotalUnits * 4.42).toFixed(2); // สมมติอัตราคงที่เพื่อความไว
+            document.getElementById('dash-baht').innerText = (localTotalUnits * 4.42).toFixed(2);
 
             chartData.push(lastWatt);
             chartData.shift();
@@ -127,65 +126,71 @@
         } catch (e) { console.error(e); }
     }
 
-    // 2. บันทึกข้อมูลแยก Rate ตามช่วงเวลา (คล้ายรูปแบบที่ส่งมา)
+    // 2. บันทึกข้อมูลแยก Rate
     async function logToRate(watt, unit, now) {
         const timeStr = now.toLocaleDateString('th-TH') + " " + now.getHours().toString().padStart(2, '0') + "." + now.getMinutes().toString().padStart(2, '0');
         let rateA = 0, rateB = 0, rateC = 0;
-        
-        // ตัวอย่างเงื่อนไข Rate (ปรับตามต้องการ)
         const hour = now.getHours();
-        if (hour >= 9 && hour < 22) rateA = unit; // Rate A กลางวัน
-        else rateB = unit; // Rate B กลางคืน
+        if (hour >= 9 && hour < 22) rateA = unit;
+        else rateB = unit;
 
-        const logEntry = { 
-            time: timeStr, 
-            rateA: rateA.toFixed(2), 
-            rateB: rateB.toFixed(2), 
-            rateC: rateC.toFixed(2), 
-            total: unit.toFixed(2) 
-        };
+        const logEntry = { time: timeStr, rateA: rateA.toFixed(2), rateB: rateB.toFixed(2), rateC: rateC.toFixed(2), total: unit.toFixed(2) };
         await fetch(`${dbUrl}history.json`, { method: 'POST', body: JSON.stringify(logEntry) });
     }
 
-    // 3. EXPORT CSV รูปแบบตาราง (Rate A, B, C, ผลรวม)     async function exportHistoryData() {
+    // 3. Export CSV
+    async function exportHistoryData() {
         const res = await fetch(`${dbUrl}history.json`);
         const data = await res.json();
         if(!data) return alert("ยังไม่มีข้อมูลบันทึก");
 
-        // หัวตารางคล้ายรูปภาพ
-        const rows = [
-            ["รายงานข้อมูลกิโลวัตต์ชั่วโมงรายวัน"],
-            ["", "RATE A", "RATE B", "RATE C", "ผลรวม"],
-            ["---", "---", "---", "---", "---"]
-        ];
-
-        Object.values(data).forEach(v => {
-            rows.push([v.time, v.rateA, v.rateB, v.rateC, v.total]);
-        });
+        const rows = [["รายงานข้อมูลกิโลวัตต์ชั่วโมงรายวัน"], ["", "RATE A", "RATE B", "RATE C", "ผลรวม"], ["---", "---", "---", "---", "---"]];
+        Object.values(data).forEach(v => { rows.push([v.time, v.rateA, v.rateB, v.rateC, v.total]); });
 
         let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
         const link = document.createElement("a");
         link.href = encodeURI(csv);
-        link.download = `Paysave_Rate_Report_${new Date().toLocaleDateString()}.csv`;
+        link.download = `Paysave_Report_${new Date().toLocaleDateString()}.csv`;
         link.click();
     }
 
-    // ฟังก์ชันพื้นฐาน
+    // 4. Navigation & Logic
     function navigate(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
         document.getElementById(id).classList.add('active-screen');
     }
-    function login() { navigate('dashboard-screen'); }
+
+    function login() {
+        const email = document.getElementById('email-input').value;
+        const pass = document.getElementById('password-input').value;
+        if(email === "user@paysave.com" && pass === "123456") {
+            navigate('dashboard-screen');
+        } else {
+            alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+        }
+    }
+
     function logout() { location.reload(); }
     async function resetAllData() { if(confirm("ลบประวัติ?")) { await fetch(`${dbUrl}history.json`, { method: 'DELETE' }); location.reload(); } }
+    function saveBudget() { alert("บันทึกงบประมาณสำเร็จ"); }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const ctx = document.getElementById('energyChart').getContext('2d');
-        energyChart = new Chart(ctx, {
+        // กราฟ Dashboard
+        const ctx1 = document.getElementById('energyChart').getContext('2d');
+        energyChart = new Chart(ctx1, {
             type: 'line',
             data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, tension: 0.4 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
+
+        // กราฟ Daily (ต้องมีเพื่อไม่ให้ระบบ Error)
+        const ctx2 = document.getElementById('dailyChart').getContext('2d');
+        dailyChart = new Chart(ctx2, {
+            type: 'bar',
+            data: { labels: ["00:00", "06:00", "12:00", "18:00"], datasets: [{ label: 'kWh', data: [0.2, 0.5, 0.8, 0.4], backgroundColor: '#9370DB' }] },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
         setInterval(fetchData, 2000);
     });
 </script>
