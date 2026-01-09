@@ -1,148 +1,258 @@
 <!DOCTYPE html>
+
 <html lang="th">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>PAY SAVE - AI Energy Identification 100%</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
     <style>
+
         :root { --primary: #9370DB; --secondary: #e67e22; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card: #ffffff; --info: #17a2b8; }
+
         body { font-family: 'Kanit', sans-serif; margin: 0; background-color: var(--bg); color: #333; }
+
         .main-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
         .screen { display: none; flex-direction: column; animation: fadeIn 0.3s ease; }
+
         .active-screen { display: flex; }
+
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
         .card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .header-row { display: flex; align-items: center; margin-bottom: 20px; }
-        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; width: 100%; margin-bottom: 10px; }
+
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+
+        .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
+
+        .metric-label { font-size: 0.9rem; color: #666; }
+
+        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
+
         .btn-main { background: var(--primary); color: white; }
-        .btn-outline { background: white; border: 1px solid #ddd; }
-        .noti-item { border-left: 5px solid var(--info); margin-bottom: 12px; padding: 15px; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+
+        .btn-google { background: #4285F4; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+        .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
+
+        .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
+
+        .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; }
+
+        .chart-box { position: relative; height: 180px; width: 100%; }
+
+        table { width: 100%; border-collapse: collapse; }
+
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+
+        .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem; }
+
         .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
-        .noti-time { color: #888; font-size: 0.75rem; display: block; margin-top: 5px; }
-        #budget-alert-bar { display: none; background: var(--danger); color: white; padding: 12px; text-align: center; border-radius: 10px; margin-bottom: 15px; font-weight: bold; }
+
+        .ai-badge { background: var(--info); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
+
     </style>
+
 </head>
+
 <body>
 
+
+
 <div class="main-container">
-    <div id="dashboard-screen" class="screen">
-        <div id="budget-alert-bar">⚠️ คำเตือน: ขณะนี้การใช้ไฟเกินงบประมาณ!</div>
-        <div class="header-row"><h2>Dashboard</h2></div>
-        <div class="card" style="text-align: center;">
-            <p>ค่าไฟสะสม: <strong id="dash-baht" style="color:var(--secondary); font-size: 2rem;">0.00</strong> บาท</p>
+
+    <div id="login-screen" class="screen active-screen">
+
+        <div class="card" style="max-width: 400px; margin: 80px auto; text-align: center;">
+
+            <h1 style="color: var(--primary); font-size: 3rem; margin: 0;">PAY SAVE</h1>
+
+            <p style="color: #666; margin-bottom: 30px;">AI Energy Identification System</p>
+
+            <input type="text" id="email-input" class="input-field" placeholder="อีเมล" value="user@paysave.com">
+
+            <input type="password" id="password-input" class="input-field" placeholder="รหัสผ่าน" value="123456">
+
+            <button class="btn btn-main" onclick="login()">เข้าสู่ระบบ</button>
+
+            <p style="margin: 10px 0;">หรือ</p>
+
+            <button class="btn btn-google" onclick="loginWithGoogle()">
+
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" width="18"> เข้าใช้งานด้วย Google
+
+            </button>
+
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน (<span id="noti-count">0</span>)</button>
-            <button class="btn btn-outline" onclick="navigate('billing-screen')">⚙️ ตั้งค่า</button>
-        </div>
+
     </div>
 
-    <div id="noti-screen" class="screen active-screen">
-        <div class="header-row">
-            <span style="cursor:pointer; font-size: 24px; margin-right: 15px;" onclick="navigate('dashboard-screen')">←</span>
-            <h2>ประวัติการแจ้งเตือน</h2>
+
+
+    <div id="dashboard-screen" class="screen">
+
+        <div class="header-row"><h2>Dashboard</h2></div>
+
+        <div class="grid-2">
+
+            <div class="card" style="text-align: center;">
+
+                <p style="font-weight:bold;">สถานะปัจจุบัน <span id="ai-status" class="ai-badge">AI กำลังวิเคราะห์...</span></p>
+
+                <div style="display: flex; justify-content: space-around;">
+
+                    <div><p id="dash-watt" class="metric-value">0</p><p class="metric-label">Watts</p></div>
+
+                    <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p class="metric-label">บาทสะสม (PEA)</p></div>
+
+                </div>
+
+                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.0000</span> kWh</p>
+
+            </div>
+
+            <div class="card">
+
+                <div class="chart-box"><canvas id="energyChart"></canvas></div>
+
+            </div>
+
         </div>
-        <div id="noti-list" class="card" style="min-height: 200px;">
-            <p style="text-align: center; color: #999; margin-top: 50px;" id="no-noti">กำลังโหลดข้อมูลจากฐานข้อมูล...</p>
+
+        <div class="btn-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+
+            <button class="btn btn-outline" onclick="navigate('daily-screen')">⚡ สถิติรายวัน</button>
+
+            <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 รายงาน & Export</button>
+
+            <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน <span id="noti-count" style="color:red;">0</span></button>
+
+            <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 วิเคราะห์อุปกรณ์</button>
+
         </div>
-        <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger);" onclick="resetNotiData()">🗑️ ล้างประวัติทั้งหมด</button>
+
+        <button class="btn btn-main" style="background: var(--danger); margin-top: 20px;" onclick="logout()">ออกจากระบบ</button>
+
     </div>
+
+
+
+    <div id="analysis-screen" class="screen">
+
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>AI วิเคราะห์อุปกรณ์</h2></div>
+
+        <div class="card">
+
+            <table>
+
+                <thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>สถานะ</th><th>Watt</th></tr></thead>
+
+                <tbody id="appliance-table"></tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+
+    <div id="noti-screen" class="screen">
+
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>การแจ้งเตือน</h2></div>
+
+        <div id="noti-list" class="card">
+
+            <p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p>
+
+        </div>
+
+    </div>
+
+
 
     <div id="billing-screen" class="screen">
-        <div class="header-row"><span style="cursor:pointer; font-size: 24px; margin-right: 15px;" onclick="navigate('dashboard-screen')">←</span><h2>ตั้งงบประมาณ</h2></div>
+
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>รายงานกิโลวัตต์ชั่วโมง</h2></div>
+
         <div class="card">
-            <input type="number" id="budget-input" style="width:100%; padding:10px; margin-bottom:10px;" placeholder="ระบุงบประมาณ">
-            <button class="btn btn-main" onclick="saveBudget()">บันทึกเป้าหมาย</button>
+
+            <p style="font-weight: bold;">📥 เลือกวันที่ดาวน์โหลดรายงาน (CSV)</p>
+
+            <input type="date" id="date-picker" class="input-field">
+
+            <button class="btn btn-main" style="background: var(--success);" onclick="exportHistoryDataByDate()">ดาวน์โหลด CSV ของวันที่เลือก</button>
+
         </div>
+
+        <div class="card">
+
+            <p style="font-weight: bold;">ตั้งงบประมาณ (บาท)</p>
+
+            <input type="number" id="budget-input" class="input-field" placeholder="ระบุงบ">
+
+            <button class="btn btn-main" onclick="saveBudget()">บันทึกเป้าหมาย</button>
+
+        </div>
+
     </div>
+
+
+
+    <div id="daily-screen" class="screen">
+
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
+
+        <div class="card" style="height: 350px;"><canvas id="dailyChart"></canvas></div>
+
+    </div>
+
 </div>
 
+
+
 <script>
+
     const firebaseConfig = {
+
         apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
+
         authDomain: "smart-money-meter.firebaseapp.com",
+
         databaseURL: "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app",
+
         projectId: "smart-money-meter",
+
         storageBucket: "smart-money-meter.firebasestorage.app",
+
         messagingSenderId: "615707583064",
+
         appId: "1:615707583064:web:93e21194a9a7b7da86602d"
+
     };
+
     firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
 
-    // 1. ฟังก์ชันดึงแจ้งเตือนแบบ Real-time (แก้ไขจุดนี้ให้แม่นยำขึ้น)
-    function loadNotifications() {
-        const notiRef = database.ref('notifications');
-        notiRef.on('value', (snapshot) => {
-            const list = document.getElementById('noti-list');
-            const countDisplay = document.getElementById('noti-count');
-            list.innerHTML = ""; // ล้างหน้าจอรอรับข้อมูลใหม่
-            
-            if (snapshot.exists()) {
-                let count = 0;
-                // วนลูปดึงข้อมูล และจัดลำดับจากใหม่ไปเก่า
-                const items = [];
-                snapshot.forEach((child) => {
-                    items.push(child.val());
-                    count++;
-                });
-                
-                items.reverse().forEach(data => {
-                    const div = document.createElement('div');
-                    div.className = `noti-item ${data.type === 'danger' ? 'danger' : ''}`;
-                    div.innerHTML = `<strong>${data.message}</strong><span class="noti-time">${data.time || ''}</span>`;
-                    list.appendChild(div);
-                });
-                
-                countDisplay.innerText = count;
-            } else {
-                list.innerHTML = '<p style="text-align: center; color: #999; margin-top: 50px;">ยังไม่มีการแจ้งเตือนบันทึกไว้</p>';
-                countDisplay.innerText = "0";
-            }
-        }, (error) => {
-            console.error("Firebase Error:", error);
-            document.getElementById('noti-list').innerHTML = `<p style="color:red; text-align:center;">เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล</p>`;
-        });
-    }
+    const auth = firebase.auth();
 
-    // 2. ฟังก์ชันเพิ่มแจ้งเตือนลง Firebase
-    function addNotiToFirebase(msg, type = 'info') {
-        database.ref('notifications').push({
-            message: msg,
-            type: type,
-            time: new Date().toLocaleString('th-TH')
-        });
-    }
+    const dbUrl = firebaseConfig.databaseURL + "/";
 
-    // 3. รีเซ็ตข้อมูล
-    function resetNotiData() {
-        if(confirm("ยืนยันการลบประวัติแจ้งเตือนทั้งหมดจากฐานข้อมูล?")) {
-            database.ref('notifications').remove();
-        }
-    }
 
-    // 4. บันทึกงบ
-    function saveBudget() {
-        const val = parseFloat(document.getElementById('budget-input').value);
-        if(!val) return;
-        database.ref('test_device').update({ budget_limit: val });
-        addNotiToFirebase(`ตั้งงบประมาณใหม่ ${val} บาท`, 'info');
-        alert("บันทึกสำเร็จ");
-    }
 
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
-    }
+    let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        loadNotifications(); // เรียกฟังก์ชันดึงข้อมูลทันที
-    });
-</script>
-</body>
-</html>
+    let chartData = Array(15).fill(0), notiCount = 0;
+
