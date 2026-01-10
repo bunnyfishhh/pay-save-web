@@ -21,9 +21,11 @@
         .metric-label { font-size: 0.9rem; color: #666; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        /* ปรับแต่งปุ่ม Google ให้มีสไตล์ตามมาตรฐาน */
-        .btn-google { background: #ffffff; color: #757575; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #ddd; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .btn-google:hover { background: #f8f9fa; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        
+        /* แก้ไขปุ่ม Google เป็นสีดำตามต้องการ */
+        .btn-google { background: #000000; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; border: 1px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-google:hover { background: #1a1a1a; }
+        
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
         .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; }
@@ -50,8 +52,8 @@
             <p style="margin: 10px 0;">หรือ</p>
             
             <button class="btn btn-google" onclick="loginWithGoogle()">
-                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cGF0aCBmaWxsPSIjRkZDOTAwIiBkPSJNMzguMTIgMjQuNDVjMC0xLjQxLS4xMi0yLjc3LS4zNC00LjA5SDI0djguMjhoNy45MmMtLjM0IDEuODMtMS4zOCAzLjM3LTIuOTQgNC40MWw0LjcxIDMuNjVjMi43Ni0yLjU0IDQuMzUtNi4yOSA0LjM1LTEwLjI1eiIvPjxwYXRoIGZpbGw9IiM0QjhGRjAiIGQ9Ik0yNCA0OGM2LjQ4IDAgMTEuOTEtMi4xNSAxNS44Ny01LjgzbC03LjI4LTUuNjVjLTIuMDEgMS4zNS00LjU5IDIuMTUtOC41OSAyLjE1LTUuOTMgMC0xMC45NC00LjAxLTEyLjc0LTkuNEg0LjE0djYuMjVDOC4xMyA0Mi44MyAxNS41NiA0OCAyNCA0OHoiLz48cGF0aCBmaWxsPSIjNDhBODVGIiBkPSJNMTEuMjYgMjkuMzVjLS40NS0xLjM1LS43MS0yLjc5LS43MS00LjM1cy4yNi0zIDEuNzEtNC4zNVYxNC40SDQuMTRjLTEuNTkgMy4xOC0yLjQ5IDYuNzMtMi40OSA5LjZzLjkgNi40MiAyLjQ5IDkuNmw3LjEyLTUuNjV6Ii8+PHBhdGggZmlsbD0iI0VTMjcyNyIgZD0iTTI0IDkuN2M0LjI3IDAgNy42IDEuODUgOS4yMiAzLjRsNi44OS02LjljLTQuMjYtMy45Ny05LjktNi4yLTMxLjk5IDAsLTUuODcgOS42OS04Ljk2IDguNjktMTIuMjlMNCAxNC40bDEyLjc0IDkuNEgxMS4yNnoiLz48L3N2Zz4=" width="20">
-                <span>เข้าใช้งานด้วย Google</span>
+                <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cGF0aCBmaWxsPSIjRkZDOTAwIiBkPSJNMzguMTIgMjQuNDVjMC0xLjQxLS4xMi0yLjc3LS4zNC00LjA5SDI0djguMjhoNy45MmMtLjM0IDEuODMtMS4zOCAzLjM3LTIuOTQgNC40MWw0LjcxIDMuNjVjMi43Ni0yLjU0IDQuMzUtNi4yOSA0LjM1LTEwLjI1eiIvPjxwYXRoIGZpbGw9IiM0QjhGRjAiIGQ9Ik0yNCA0OGM2LjQ4IDAgMTEuOTEtMi4xNSAxNS44Ny01LjgzbC03LjI4LTUuNjVjLTIuMDEgMS4zNS00LjU5IDIuMTUtOC41OSAyLjE1LTUuOTMgMC0xMC45NC00LjAxLTEyLjc0LTkuNEg0LjE0djYuMjVDOC4xMyA0Mi44MyAxNS41NiA0OCAyNCA0OHoiLz48cGF0aCBmaWxsPSIjNDhBODVGIiBkPSJNMTEuMjYgMjkuMzVjLS40NS0xLjM1LS43MS0yLjc5LS43MS00LjM1cy4yNi0zIDEuNzEtNC4zNVYxNC40SDQuMTRjLTEuNTkgMy4xOC0yLjQ5IDYuNzMtMi40OSA5LjZzLjkgNi40MiAyLjQ5IDkuNmw3LjEyLTUuNjV6Ii8+PHBhdGggZmlsbD0iI0VTMjcyNyIgZD0iTTI0IDkuN2M0LjI3IDAgNy42IDEuODUgOS4yMiAzLjRsNi44OS02LjljLTQuMjYtMy45Ny05LjktNi4yLTMxLjk5IDAsLTUuODcgOS42OS04Ljk2IDguNjktMTIuMjlMNCAxNC40bDEyLjc0IDkuNEgxMS4yNnoiLz48L3N2Zz4=" width="24">
+                <span>Continue with Google</span>
             </button>
         </div>
     </div>
@@ -79,7 +81,17 @@
             <button class="btn btn-outline" onclick="navigate('daily-screen')">⚡ สถิติรายวัน</button>
             <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 รายงาน & Export</button>
             <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน <span id="noti-count" style="color:red;">0</span></button>
-            <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 วิเคราะห์อุปกรณ์</button>
+            <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 ประวัติอุปกรณ์</button>
+        </div>
+    </div>
+
+    <div id="analysis-screen" class="screen">
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>ประวัติการเปิด-ปิดอุปกรณ์</h2></div>
+        <div class="card">
+            <table>
+                <thead><tr><th>เวลา</th><th>อุปกรณ์</th><th>สถานะ</th><th>Watt</th></tr></thead>
+                <tbody id="appliance-log-body"></tbody>
+            </table>
         </div>
     </div>
 
@@ -95,11 +107,6 @@
             <input type="number" id="budget-input" class="input-field" placeholder="ระบุงบ เช่น 500">
             <button class="btn btn-main" onclick="saveBudget()">บันทึกเป้าหมาย</button>
         </div>
-    </div>
-
-    <div id="analysis-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>AI วิเคราะห์อุปกรณ์</h2></div>
-        <div class="card"><table><thead><tr><th>เครื่องใช้ไฟฟ้า</th><th>สถานะ</th><th>Watt</th></tr></thead><tbody id="appliance-table"></tbody></table></div>
     </div>
 
     <div id="noti-screen" class="screen">
@@ -129,15 +136,21 @@
 
     let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
     let chartData = Array(15).fill(0), notiCount = 0, userBudget = localStorage.getItem('paysave_budget') || 0;
-    let hasAlertedBudget = false;
+    let hasAlertedBudget = false, lastApplianceState = "";
 
-    // ระบบ Login และเก็บข้อมูลผู้ใช้หลังบ้าน
+    // ฟังก์ชันช่วยดึง Token สำหรับเรียก API ภายใต้กฎใหม่
+    async function getAuthUrl(path) {
+        const user = auth.currentUser;
+        if (!user) return null;
+        const token = await user.getIdToken();
+        return `${dbUrl}${path}.json?auth=${token}`;
+    }
+
     function loginWithGoogle() {
         const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).then((result) => {
+        auth.signInWithPopup(provider).then(async (result) => {
             const user = result.user;
-            
-            // เตรียมข้อมูลที่จะเก็บลงฐานข้อมูลหลังบ้าน
+            const url = await getAuthUrl(`users/${user.uid}`);
             const userData = {
                 displayName: user.displayName,
                 email: user.email,
@@ -145,34 +158,25 @@
                 lastLogin: new Date().toLocaleString('th-TH'),
                 uid: user.uid
             };
-
-            // บันทึกข้อมูลลงโฟลเดอร์ users โดยใช้ UID ของผู้ใช้เป็นชื่อไฟล์
-            fetch(`${dbUrl}users/${user.uid}.json`, {
-                method: 'PATCH',
-                body: JSON.stringify(userData)
-            })
-            .then(() => {
-                console.log("บันทึกข้อมูลผู้ใช้เรียบร้อย");
-                navigate('dashboard-screen');
-            })
-            .catch(err => console.error("Error saving user:", err));
-
+            fetch(url, { method: 'PATCH', body: JSON.stringify(userData) })
+            .then(() => navigate('dashboard-screen'));
         }).catch(e => alert("เกิดข้อผิดพลาด: " + e.message));
     }
 
     async function fetchData() {
         try {
-            const res = await fetch(`${dbUrl}.json`);
+            const url = await getAuthUrl('');
+            if (!url) return;
+            const res = await fetch(url);
             const data = await res.json();
             if(!data) return;
 
             lastWatt = data.current_watt || 0; 
-            if(localTotalUnits === null) {
-                localTotalUnits = data.total_units || 0;
-            }
+            if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
 
             localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
-            fetch(`${dbUrl}.json`, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
+            const patchUrl = await getAuthUrl('');
+            fetch(patchUrl, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
 
             const currentBaht = (localTotalUnits * 4.42);
             document.getElementById('dash-watt').innerText = lastWatt;
@@ -193,44 +197,63 @@
             }
 
             chartData.push(lastWatt); chartData.shift(); energyChart.update('none');
-            analyzeAppliance(lastWatt);
+            analyzeAndLogAppliance(lastWatt);
         } catch (e) { console.error(e); }
+    }
+
+    async function analyzeAndLogAppliance(w) {
+        let name = w < 10 ? "ปิดเครื่อง" : (w < 500 ? "ทีวี/ตู้เย็น" : "แอร์/เตารีด");
+        document.getElementById('ai-status').innerText = name;
+
+        if (name !== lastApplianceState) {
+            const dateKey = new Date().toISOString().split('T')[0];
+            const timeStr = new Date().getHours().toString().padStart(2, '0') + ":" + new Date().getMinutes().toString().padStart(2, '0');
+            const logUrl = await getAuthUrl(`appliance_logs/${dateKey}`);
+            if (logUrl) {
+                fetch(logUrl, { method: 'POST', body: JSON.stringify({ time: timeStr, appliance: name, status: w > 10 ? "เปิด" : "ปิด", watt: w }) });
+            }
+            lastApplianceState = name;
+            if(document.getElementById('analysis-screen').classList.contains('active-screen')) loadApplianceLogs();
+        }
+    }
+
+    async function loadApplianceLogs() {
+        const dateKey = new Date().toISOString().split('T')[0];
+        const url = await getAuthUrl(`appliance_logs/${dateKey}`);
+        if (!url) return;
+        const res = await fetch(url);
+        const data = await res.json();
+        const tbody = document.getElementById('appliance-log-body');
+        if (!data || !tbody) return;
+        tbody.innerHTML = "";
+        Object.values(data).reverse().slice(0, 10).forEach(log => {
+            tbody.innerHTML += `<tr><td>${log.time}</td><td>${log.appliance}</td><td>${log.status}</td><td>${log.watt} W</td></tr>`;
+        });
     }
 
     async function logToRate(watt, unit, now) {
         const dateKey = now.toISOString().split('T')[0];
         const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-        await fetch(`${dbUrl}history/${dateKey}.json`, { 
-            method: 'POST', 
-            body: JSON.stringify({ time: timeStr, watt: watt, rateA: unit.toFixed(4), rateB: 0, total: unit.toFixed(4) }) 
-        });
+        const url = await getAuthUrl(`history/${dateKey}`);
+        if (url) {
+            fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) });
+        }
     }
 
     async function exportHistoryDataByDate() {
         const date = document.getElementById('date-picker').value;
         if (!date) return alert("เลือกวันที่");
-        const res = await fetch(`${dbUrl}history/${date}.json`);
+        const url = await getAuthUrl(`history/${date}`);
+        const res = await fetch(url);
         const data = await res.json();
         if(!data) return alert("ไม่มีข้อมูล");
         const rows = [["เวลา", "กำลังไฟฟ้า (Watts)", "หน่วยสะสม (kWh)", "ยอดเงินสะสม (บาท)"]];
         Object.values(data).forEach(v => {
             const unit = parseFloat(v.total) || 0;
-            const money = (unit * 4.42).toFixed(2);
-            rows.push([v.time, (v.watt || 0) + " W", unit.toFixed(4) + " kWh", money + " บาท"]);
+            rows.push([v.time, (v.watt || 0) + " W", unit.toFixed(4) + " kWh", (unit * 4.42).toFixed(2) + " บาท"]);
         });
         let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
         const link = document.createElement("a"); link.href = encodeURI(csv); link.download = `Paysave_Report_${date}.csv`; link.click();
-    }
-
-    function analyzeAppliance(w) {
-        const tbody = document.getElementById('appliance-table');
-        const aiStatus = document.getElementById('ai-status');
-        let name = "สแตนด์บาย", status = "ปกติ";
-        if (w > 10 && w < 50) { name = "ไฟ/พัดลม"; status = "เปิดอยู่"; }
-        else if (w >= 50 && w < 500) { name = "ตู้เย็น/ทีวี"; status = "ทำงาน"; }
-        else if (w >= 500) { name = "แอร์/เตารีด"; status = "กินไฟสูง"; }
-        aiStatus.innerText = name;
-        if(tbody) tbody.innerHTML = `<tr><td>${name}</td><td>${status}</td><td>${w} W</td></tr>`;
     }
 
     function addNotification(msg, type = 'info') {
@@ -262,19 +285,19 @@
         }
     }
 
-    function resetNotifications() {
-        if(confirm("ลบทั้งหมด?")) { localStorage.removeItem('paysave_notis'); location.reload(); }
-    }
-
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
+    function resetNotifications() { if(confirm("ลบทั้งหมด?")) { localStorage.removeItem('paysave_notis'); location.reload(); } }
+    function navigate(id) { 
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); 
+        document.getElementById(id).classList.add('active-screen'); 
         if (id === 'daily-screen') updateDailyChart();
+        if (id === 'analysis-screen') loadApplianceLogs();
     }
 
     async function updateDailyChart() {
         const dateKey = new Date().toISOString().split('T')[0];
-        const res = await fetch(`${dbUrl}history/${dateKey}.json`);
+        const url = await getAuthUrl(`history/${dateKey}`);
+        if (!url) return;
+        const res = await fetch(url);
         const data = await res.json();
         if (!data) return;
         let p = { "00:00": 0, "06:00": 0, "12:00": 0, "18:00": 0 };
@@ -290,11 +313,7 @@
         dailyChart.update();
     }
 
-    function saveBudget() {
-        const val = document.getElementById('budget-input').value;
-        if (val > 0) { userBudget = parseFloat(val); localStorage.setItem('paysave_budget', userBudget); hasAlertedBudget = false; alert("บันทึกแล้ว"); fetchData(); }
-    }
-
+    function saveBudget() { const val = document.getElementById('budget-input').value; if (val > 0) { userBudget = parseFloat(val); localStorage.setItem('paysave_budget', userBudget); hasAlertedBudget = false; alert("บันทึกแล้ว"); fetchData(); } }
     function login() { navigate('dashboard-screen'); }
     function logout() { auth.signOut().then(() => location.reload()); }
 
