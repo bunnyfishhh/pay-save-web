@@ -21,11 +21,8 @@
         .metric-label { font-size: 0.9rem; color: #666; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        
-        /* แก้ไขปุ่ม Google เป็นสีดำตามต้องการ */
         .btn-google { background: #000000; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; border: 1px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn-google:hover { background: #1a1a1a; }
-        
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
         .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; }
@@ -50,7 +47,6 @@
             <input type="password" id="password-input" class="input-field" placeholder="รหัสผ่าน" value="123456">
             <button class="btn btn-main" onclick="login()">เข้าสู่ระบบ</button>
             <p style="margin: 10px 0;">หรือ</p>
-            
             <button class="btn btn-google" onclick="loginWithGoogle()">
                 <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cGF0aCBmaWxsPSIjRkZDOTAwIiBkPSJNMzguMTIgMjQuNDVjMC0xLjQxLS4xMi0yLjc3LS4zNC00LjA5SDI0djguMjhoNy45MmMtLjM0IDEuODMtMS4zOCAzLjM3LTIuOTQgNC40MWw0LjcxIDMuNjVjMi43Ni0yLjU0IDQuMzUtNi4yOSA0LjM1LTEwLjI1eiIvPjxwYXRoIGZpbGw9IiM0QjhGRjAiIGQ9Ik0yNCA0OGM2LjQ4IDAgMTEuOTEtMi4xNSAxNS44Ny01LjgzbC03LjI4LTUuNjVjLTIuMDEgMS4zNS00LjU5IDIuMTUtOC41OSAyLjE1LTUuOTMgMC0xMC45NC00LjAxLTEyLjc0LTkuNEg0LjE0djYuMjVDOC4xMyA0Mi44MyAxNS41NiA0OCAyNCA0OHoiLz48cGF0aCBmaWxsPSIjNDhBODVGIiBkPSJNMTEuMjYgMjkuMzVjLS40NS0xLjM1LS43MS0yLjc5LS43MS00LjM1cy4yNi0zIDEuNzEtNC4zNVYxNC40SDQuMTRjLTEuNTkgMy4xOC0yLjQ5IDYuNzMtMi40OSA5LjZzLjkgNi40MiAyLjQ5IDkuNmw3LjEyLTUuNjV6Ii8+PHBhdGggZmlsbD0iI0VTMjcyNyIgZD0iTTI0IDkuN2M0LjI3IDAgNy42IDEuODUgOS4yMiAzLjRsNi44OS02LjljLTQuMjYtMy45Ny05LjktNi4yLTMxLjk5IDAsLTUuODcgOS42OS04Ljk2IDguNjktMTIuMjlMNCAxNC40bDEyLjc0IDkuNEgxMS4yNnoiLz48L3N2Zz4=" width="24">
                 <span>Continue with Google</span>
@@ -63,7 +59,7 @@
             <h2>Dashboard</h2>
             <button class="btn btn-outline" style="width: auto;" onclick="logout()">ออกจากระบบ</button>
         </div>
-        <div id="budget-alert-banner" class="alert-banner">⚠️ คำเตือน: ค่าไฟเกินงบประมาณที่ตั้งไว้!</div>
+        <div id="budget-alert-banner" class="alert-banner">⚠️ ค่าไฟเกินงบประมาณที่ตั้งไว้!</div>
         <div class="grid-2">
             <div class="card" style="text-align: center;">
                 <p style="font-weight:bold;">สถานะปัจจุบัน <span id="ai-status" class="ai-badge">AI กำลังวิเคราะห์...</span></p>
@@ -138,7 +134,6 @@
     let chartData = Array(15).fill(0), notiCount = 0, userBudget = localStorage.getItem('paysave_budget') || 0;
     let hasAlertedBudget = false, lastApplianceState = "";
 
-    // ฟังก์ชันช่วยดึง Token สำหรับเรียก API ภายใต้กฎใหม่
     async function getAuthUrl(path) {
         const user = auth.currentUser;
         if (!user) return null;
@@ -151,15 +146,8 @@
         auth.signInWithPopup(provider).then(async (result) => {
             const user = result.user;
             const url = await getAuthUrl(`users/${user.uid}`);
-            const userData = {
-                displayName: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                lastLogin: new Date().toLocaleString('th-TH'),
-                uid: user.uid
-            };
-            fetch(url, { method: 'PATCH', body: JSON.stringify(userData) })
-            .then(() => navigate('dashboard-screen'));
+            const userData = { displayName: user.displayName, email: user.email, photoURL: user.photoURL, lastLogin: new Date().toLocaleString('th-TH'), uid: user.uid };
+            fetch(url, { method: 'PATCH', body: JSON.stringify(userData) }).then(() => navigate('dashboard-screen'));
         }).catch(e => alert("เกิดข้อผิดพลาด: " + e.message));
     }
 
@@ -187,7 +175,11 @@
             if (userBudget > 0 && currentBaht > userBudget) {
                 banner.style.display = 'block';
                 banner.innerText = `⚠️ ค่าไฟเกินงบ! (${currentBaht.toFixed(2)} / ${userBudget} บาท)`;
-                if (!hasAlertedBudget) { addNotification(`ค่าไฟเกินงบที่ตั้งไว้!`, 'danger'); hasAlertedBudget = true; }
+                if (!hasAlertedBudget) { 
+                    // ส่วนที่แก้ไข: เพิ่มข้อมูลปัจจุบันเปรียบเทียบกับงบในประวัติแจ้งเตือน
+                    addNotification(`ค่าไฟเกินงบที่ตั้งไว้! (ปัจจุบัน ${currentBaht.toFixed(2)} บ. / งบ ${userBudget} บ.)`, 'danger'); 
+                    hasAlertedBudget = true; 
+                }
             } else { banner.style.display = 'none'; }
 
             const now = new Date();
@@ -204,7 +196,6 @@
     async function analyzeAndLogAppliance(w) {
         let name = w < 10 ? "ปิดเครื่อง" : (w < 500 ? "ทีวี/ตู้เย็น" : "แอร์/เตารีด");
         document.getElementById('ai-status').innerText = name;
-
         if (name !== lastApplianceState) {
             const dateKey = new Date().toISOString().split('T')[0];
             const timeStr = new Date().getHours().toString().padStart(2, '0') + ":" + new Date().getMinutes().toString().padStart(2, '0');
@@ -235,9 +226,7 @@
         const dateKey = now.toISOString().split('T')[0];
         const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
         const url = await getAuthUrl(`history/${dateKey}`);
-        if (url) {
-            fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) });
-        }
+        if (url) { fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) }); }
     }
 
     async function exportHistoryDataByDate() {
