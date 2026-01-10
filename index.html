@@ -19,7 +19,7 @@
         .input-field { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; outline: none; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; font-size: 16px; }
         .btn-main { background: var(--primary); color: white; }
-        .btn-google { background: #000000; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; border: 1px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-google { background: steelblue; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn-google:hover { background: #1a1a1a; }
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
@@ -51,11 +51,11 @@
 
     <div id="login-screen" class="screen">
         <div class="card" style="max-width: 400px; margin: 60px auto; text-align: center;">
-            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">เข้าสู่ระบบ</h1>
-            <p style="color: #666; margin-bottom: 25px;">AI Energy Identification System</p>
+            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">PAY SAVE</h1>
+            <p style="color: #666; margin-bottom: 25px;">LOGIN</p>
             <input type="email" id="login-email" class="input-field" placeholder="อีเมล">
             <input type="password" id="login-pass" class="input-field" placeholder="รหัสผ่าน">
-            <button class="btn btn-main" onclick="handleEmailLogin()">เข้าสู่ระบบ</button>
+            <button class="btn btn-main" onclick="handleEmailLogin()">login</button>
             <p style="margin: 10px 0;">หรือ</p>
             <button class="btn btn-google" onclick="loginWithGoogle()">
                 <span>Continue with Google</span>
