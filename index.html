@@ -21,10 +21,8 @@
         .metric-label { font-size: 0.9rem; color: #666; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        
         .btn-google { background: #000000; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; border: 1px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn-google:hover { background: #1a1a1a; }
-        
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
         .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; }
@@ -49,7 +47,6 @@
             <input type="password" id="password-input" class="input-field" placeholder="รหัสผ่าน" value="123456">
             <button class="btn btn-main" onclick="login()">เข้าสู่ระบบ</button>
             <p style="margin: 10px 0;">หรือ</p>
-            
             <button class="btn btn-google" onclick="loginWithGoogle()">
                 <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cGF0aCBmaWxsPSIjRkZDOTAwIiBkPSJNMzguMTIgMjQuNDVjMC0xLjQxLS4xMi0yLjc3LS4zNC00LjA5SDI0djguMjhoNy45MmMtLjM0IDEuODMtMS4zOCAzLjM3LTIuOTQgNC40MWw0LjcxIDMuNjVjMi43Ni0yLjU0IDQuMzUtNi4yOSA0LjM1LTEwLjI1eiIvPjxwYXRoIGZpbGw9IiM0QjhGRjAiIGQ9Ik0yNCA0OGM2LjQ4IDAgMTEuOTEtMi4xNSAxNS44Ny01LjgzbC03LjI4LTUuNjVjLTIuMDEgMS4zNS00LjU5IDIuMTUtOC41OSAyLjE1LTUuOTMgMC0xMC45NC00LjAxLTEyLjc0LTkuNEg0LjE0djYuMjVDOC4xMyA0Mi44MyAxNS41NiA0OCAyNCA0OHoiLz48cGF0aCBmaWxsPSIjNDhBODVGIiBkPSJNMTEuMjYgMjkuMzVjLS40NS0xLjM1LS43MS0yLjc5LS43MS00LjM1cy4yNi0zIDEuNzEtNC4zNVYxNC40SDQuMTRjLTEuNTkgMy4xOC0yLjQ5IDYuNzMtMi40OSA5LjZzLjkgNi40MiAyLjQ5IDkuNmw3LjEyLTUuNjV6Ii8+PHBhdGggZmlsbD0iI0VTMjcyNyIgZD0iTTI0IDkuN2M0LjI3IDAgNy42IDEuODUgOS4yMiAzLjRsNi44OS02LjljLTQuMjYtMy45Ny05LjktNi4yLTMxLjk5IDAsLTUuODcgOS42OS04Ljk2IDguNjktMTIuMjlMNCAxNC40bDEyLjc0IDkuNEgxMS4yNnoiLz48L3N2Zz4=" width="24">
                 <span>Continue with Google</span>
@@ -136,6 +133,9 @@
     let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
     let chartData = Array(15).fill(0), notiCount = 0, userBudget = localStorage.getItem('paysave_budget') || 0;
     let hasAlertedBudget = false, lastApplianceState = "";
+    
+    // AI Variables
+    let powerBuffer = []; 
 
     async function getAuthUrl(path) {
         const user = auth.currentUser;
@@ -174,7 +174,7 @@
             document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
             document.getElementById('dash-baht').innerText = currentBaht.toFixed(2);
 
-            // ส่วนจัดการงบประมาณและการแจ้งเตือน
+            // แจ้งเตือนงบประมาณแบบ Dynamic
             const banner = document.getElementById('budget-alert-banner');
             if (userBudget > 0) {
                 if (currentBaht > userBudget) {
@@ -200,9 +200,31 @@
         } catch (e) { console.error(e); }
     }
 
+    // AI ที่ฉลาดขึ้น วิเคราะห์ลักษณะการใช้ไฟ
     async function analyzeAndLogAppliance(w) {
-        let name = w < 10 ? "ปิดเครื่อง" : (w < 500 ? "ทีวี/ตู้เย็น" : "แอร์/เตารีด");
+        powerBuffer.push(w);
+        if(powerBuffer.length > 5) powerBuffer.shift();
+        
+        // คำนวณความผันแปรเพื่อเช็คว่าเป็น Pattern ของอุปกรณ์ไหน
+        let diff = Math.max(...powerBuffer) - Math.min(...powerBuffer);
+        let name = "สแตนด์บาย";
+
+        if (w > 10) {
+            if (w < 50) name = "พัดลม/ไฟ";
+            else if (w < 500) {
+                // ถ้าไฟนิ่งคือทีวี ถ้าไฟแกว่งเล็กน้อยอาจเป็นตู้เย็น
+                name = diff < 20 ? "ทีวี/จอภาพ" : "ตู้เย็น (คอมเพรสเซอร์ทำงาน)";
+            } else {
+                // ถ้าไฟแกว่งมากคือเครื่องซักผ้า ถ้าไฟสูงมากและนิ่งคือเตารีด/เครื่องทำน้ำอุ่น
+                if (w > 1500 && diff < 50) name = "เครื่องทำน้ำอุ่น/เตารีด";
+                else name = "เครื่องปรับอากาศ";
+            }
+        } else {
+            name = "ปิดเครื่อง";
+        }
+
         document.getElementById('ai-status').innerText = name;
+
         if (name !== lastApplianceState) {
             const dateKey = new Date().toISOString().split('T')[0];
             const timeStr = new Date().getHours().toString().padStart(2, '0') + ":" + new Date().getMinutes().toString().padStart(2, '0');
@@ -282,6 +304,7 @@
     }
 
     function resetNotifications() { if(confirm("ลบทั้งหมด?")) { localStorage.removeItem('paysave_notis'); location.reload(); } }
+    
     function navigate(id) { 
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); 
         document.getElementById(id).classList.add('active-screen'); 
@@ -309,7 +332,6 @@
         dailyChart.update();
     }
 
-    // แก้ไขฟังก์ชันบันทึกงบประมาณให้มีการแจ้งเตือนเมื่อตั้งสำเร็จ
     function saveBudget() { 
         const val = document.getElementById('budget-input').value; 
         if (val > 0) { 
@@ -317,10 +339,10 @@
             localStorage.setItem('paysave_budget', userBudget); 
             hasAlertedBudget = false; 
             
-            // เพิ่มการแจ้งเตือนแบบ "ไม่เกินงบ" เพื่อบอกเป้าหมาย
+            // แจ้งเตือนเป้าหมายเมื่อตั้งงบสำเร็จ
             addNotification(`คุณตั้งงบประมาณค่าไฟเดือนนี้ไว้ไม่เกิน ${userBudget} บาท`, 'info');
             
-            alert("บันทึกเป้าหมายแล้ว"); 
+            alert("บันทึกเป้าหมายเรียบร้อยแล้ว"); 
             fetchData(); 
         } 
     }
