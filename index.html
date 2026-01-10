@@ -15,17 +15,16 @@
         .screen { display: none; flex-direction: column; animation: fadeIn 0.3s ease; }
         .active-screen { display: flex; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card { background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
-        .metric-label { font-size: 0.9rem; color: #666; }
-        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; }
+        .card { background: var(--card); border-radius: 15px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .input-field { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; outline: none; }
+        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; font-size: 16px; }
         .btn-main { background: var(--primary); color: white; }
         .btn-google { background: #000000; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; border: 1px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .btn-google:hover { background: #1a1a1a; }
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
-        .input-field { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; }
+        .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
+        .metric-label { font-size: 0.9rem; color: #666; }
         .chart-box { position: relative; height: 180px; width: 100%; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
@@ -39,18 +38,30 @@
 <body>
 
 <div class="main-container">
-    <div id="login-screen" class="screen active-screen">
-        <div class="card" style="max-width: 400px; margin: 80px auto; text-align: center;">
-            <h1 style="color: var(--primary); font-size: 3rem; margin: 0;">PAY SAVE</h1>
-            <p style="color: #666; margin-bottom: 30px;">AI Energy Identification System</p>
-            <input type="text" id="email-input" class="input-field" placeholder="อีเมล" value="user@paysave.com">
-            <input type="password" id="password-input" class="input-field" placeholder="รหัสผ่าน" value="123456">
-            <button class="btn btn-main" onclick="login()">เข้าสู่ระบบ</button>
+    <div id="register-screen" class="screen active-screen">
+        <div class="card" style="max-width: 400px; margin: 60px auto; text-align: center;">
+            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">สมัครสมาชิก</h1>
+            <p style="color: #666; margin-bottom: 25px;">สร้างบัญชี PAY SAVE ของคุณ</p>
+            <input type="email" id="reg-email" class="input-field" placeholder="อีเมล">
+            <input type="password" id="reg-pass" class="input-field" placeholder="รหัสผ่าน (6 ตัวขึ้นไป)">
+            <button class="btn btn-main" onclick="handleRegister()">ลงทะเบียน</button>
+            <p style="margin-top: 15px;">เป็นสมาชิกอยู่แล้ว? <a href="#" onclick="navigate('login-screen')" style="color: var(--primary);">เข้าสู่ระบบ</a></p>
+        </div>
+    </div>
+
+    <div id="login-screen" class="screen">
+        <div class="card" style="max-width: 400px; margin: 60px auto; text-align: center;">
+            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">เข้าสู่ระบบ</h1>
+            <p style="color: #666; margin-bottom: 25px;">AI Energy Identification System</p>
+            <input type="email" id="login-email" class="input-field" placeholder="อีเมล">
+            <input type="password" id="login-pass" class="input-field" placeholder="รหัสผ่าน">
+            <button class="btn btn-main" onclick="handleEmailLogin()">เข้าสู่ระบบ</button>
             <p style="margin: 10px 0;">หรือ</p>
             <button class="btn btn-google" onclick="loginWithGoogle()">
                 <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgdmlld0JveD0iMCAwIDQ4IDQ4Ij48cGF0aCBmaWxsPSIjRkZDOTAwIiBkPSJNMzguMTIgMjQuNDVjMC0xLjQxLS4xMi0yLjc3LS4zNC00LjA5SDI0djguMjhoNy45MmMtLjM0IDEuODMtMS4zOCAzLjM3LTIuOTQgNC40MWw0LjcxIDMuNjVjMi43Ni0yLjU0IDQuMzUtNi4yOSA0LjM1LTEwLjI1eiIvPjxwYXRoIGZpbGw9IiM0QjhGRjAiIGQ9Ik0yNCA0OGM2LjQ4IDAgMTEuOTEtMi4xNSAxNS44Ny01LjgzbC03LjI4LTUuNjVjLTIuMDEgMS4zNS00LjU5IDIuMTUtOC41OSAyLjE1LTUuOTMgMC0xMC45NC00LjAxLTEyLjc0LTkuNEg0LjE0djYuMjVDOC4xMyA0Mi44MyAxNS41NiA0OCAyNCA0OHoiLz48cGF0aCBmaWxsPSIjNDhBODVGIiBkPSJNMTEuMjYgMjkuMzVjLS40NS0xLjM1LS43MS0yLjc5LS43MS00LjM1cy4yNi0zIDEuNzEtNC4zNVYxNC40SDQuMTRjLTEuNTkgMy4xOC0yLjQ5IDYuNzMtMi40OSA5LjZzLjkgNi40MiAyLjQ5IDkuNmw3LjEyLTUuNjV6Ii8+PHBhdGggZmlsbD0iI0VTMjcyNyIgZD0iTTI0IDkuN2M0LjI3IDAgNy42IDEuODUgOS4yMiAzLjRsNi44OS02LjljLTQuMjYtMy45Ny05LjktNi4yLTMxLjk5IDAsLTUuODcgOS42OS04Ljk2IDguNjktMTIuMjlMNCAxNC40bDEyLjc0IDkuNEgxMS4yNnoiLz48L3N2Zz4=" width="24">
                 <span>Continue with Google</span>
             </button>
+            <p style="margin-top: 15px;">ยังไม่มีบัญชี? <a href="#" onclick="navigate('register-screen')" style="color: var(--primary);">สมัครสมาชิก</a></p>
         </div>
     </div>
 
@@ -133,25 +144,52 @@
     let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
     let chartData = Array(15).fill(0), notiCount = 0, userBudget = localStorage.getItem('paysave_budget') || 0;
     let hasAlertedBudget = false, lastApplianceState = "";
-    
-    // AI Variables
     let powerBuffer = []; 
+
+    // ระบบสมัครสมาชิกและล็อกอิน
+    function handleRegister() {
+        const email = document.getElementById('reg-email').value;
+        const pass = document.getElementById('reg-pass').value;
+        if(pass.length < 6) return alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+        auth.createUserWithEmailAndPassword(email, pass)
+            .then(() => alert("ลงทะเบียนสำเร็จ! กรุณาเข้าสู่ระบบ"))
+            .catch(e => alert(e.message));
+    }
+
+    function handleEmailLogin() {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-pass').value;
+        auth.signInWithEmailAndPassword(email, pass)
+            .catch(e => alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง"));
+    }
+
+    function loginWithGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(e => alert(e.message));
+    }
+
+    function logout() { auth.signOut(); }
+
+    // สังเกตสถานะการล็อกอิน (Auth Guard)
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            navigate('dashboard-screen');
+            startDataFetch();
+        } else {
+            navigate('login-screen');
+            stopDataFetch();
+        }
+    });
+
+    let fetchInterval;
+    function startDataFetch() { if(!fetchInterval) fetchInterval = setInterval(fetchData, 2000); }
+    function stopDataFetch() { clearInterval(fetchInterval); fetchInterval = null; }
 
     async function getAuthUrl(path) {
         const user = auth.currentUser;
         if (!user) return null;
         const token = await user.getIdToken();
         return `${dbUrl}${path}.json?auth=${token}`;
-    }
-
-    function loginWithGoogle() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).then(async (result) => {
-            const user = result.user;
-            const url = await getAuthUrl(`users/${user.uid}`);
-            const userData = { displayName: user.displayName, email: user.email, photoURL: user.photoURL, lastLogin: new Date().toLocaleString('th-TH'), uid: user.uid };
-            fetch(url, { method: 'PATCH', body: JSON.stringify(userData) }).then(() => navigate('dashboard-screen'));
-        }).catch(e => alert("เกิดข้อผิดพลาด: " + e.message));
     }
 
     async function fetchData() {
@@ -174,7 +212,7 @@
             document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
             document.getElementById('dash-baht').innerText = currentBaht.toFixed(2);
 
-            // แจ้งเตือนงบประมาณแบบ Dynamic
+            // แจ้งเตือนงบประมาณ
             const banner = document.getElementById('budget-alert-banner');
             if (userBudget > 0) {
                 if (currentBaht > userBudget) {
@@ -200,22 +238,18 @@
         } catch (e) { console.error(e); }
     }
 
-    // AI ที่ฉลาดขึ้น วิเคราะห์ลักษณะการใช้ไฟ
+    // AI วิเคราะห์พฤติกรรม
     async function analyzeAndLogAppliance(w) {
         powerBuffer.push(w);
         if(powerBuffer.length > 5) powerBuffer.shift();
-        
-        // คำนวณความผันแปรเพื่อเช็คว่าเป็น Pattern ของอุปกรณ์ไหน
         let diff = Math.max(...powerBuffer) - Math.min(...powerBuffer);
         let name = "สแตนด์บาย";
 
         if (w > 10) {
             if (w < 50) name = "พัดลม/ไฟ";
             else if (w < 500) {
-                // ถ้าไฟนิ่งคือทีวี ถ้าไฟแกว่งเล็กน้อยอาจเป็นตู้เย็น
                 name = diff < 20 ? "ทีวี/จอภาพ" : "ตู้เย็น (คอมเพรสเซอร์ทำงาน)";
             } else {
-                // ถ้าไฟแกว่งมากคือเครื่องซักผ้า ถ้าไฟสูงมากและนิ่งคือเตารีด/เครื่องทำน้ำอุ่น
                 if (w > 1500 && diff < 50) name = "เครื่องทำน้ำอุ่น/เตารีด";
                 else name = "เครื่องปรับอากาศ";
             }
@@ -256,6 +290,18 @@
         const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
         const url = await getAuthUrl(`history/${dateKey}`);
         if (url) { fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) }); }
+    }
+
+    function saveBudget() { 
+        const val = document.getElementById('budget-input').value; 
+        if (val > 0) { 
+            userBudget = parseFloat(val); 
+            localStorage.setItem('paysave_budget', userBudget); 
+            hasAlertedBudget = false; 
+            addNotification(`คุณตั้งงบประมาณค่าไฟเดือนนี้ไว้ไม่เกิน ${userBudget} บาท`, 'info');
+            alert("บันทึกเป้าหมายแล้ว"); 
+            fetchData(); 
+        } 
     }
 
     async function exportHistoryDataByDate() {
@@ -332,31 +378,12 @@
         dailyChart.update();
     }
 
-    function saveBudget() { 
-        const val = document.getElementById('budget-input').value; 
-        if (val > 0) { 
-            userBudget = parseFloat(val); 
-            localStorage.setItem('paysave_budget', userBudget); 
-            hasAlertedBudget = false; 
-            
-            // แจ้งเตือนเป้าหมายเมื่อตั้งงบสำเร็จ
-            addNotification(`คุณตั้งงบประมาณค่าไฟเดือนนี้ไว้ไม่เกิน ${userBudget} บาท`, 'info');
-            
-            alert("บันทึกเป้าหมายเรียบร้อยแล้ว"); 
-            fetchData(); 
-        } 
-    }
-
-    function login() { navigate('dashboard-screen'); }
-    function logout() { auth.signOut().then(() => location.reload()); }
-
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
         loadNotifications();
         if(userBudget > 0) document.getElementById('budget-input').value = userBudget;
         energyChart = new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
         dailyChart = new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ["00:00", "06:00", "12:00", "18:00"], datasets: [{ label: 'kWh', data: [0,0,0,0], backgroundColor: '#9370DB' }] }, options: { responsive: true, maintainAspectRatio: false } });
-        setInterval(fetchData, 2000);
     });
 </script>
 </body>
