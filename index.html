@@ -19,14 +19,20 @@
         .input-field { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; outline: none; }
         .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; font-size: 16px; }
         .btn-main { background: var(--primary); color: white; }
-        .btn-google { background: steelblue; color: white; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .btn-google { background: #000000; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; border: 1px solid #333; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-google:hover { background: #1a1a1a; }
         .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
         .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
         .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
         .metric-label { font-size: 0.9rem; color: #666; }
+        .chart-box { position: relative; height: 180px; width: 100%; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem; }
+        .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
+        .ai-badge { background: var(--info); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
         .alert-banner { display: none; background-color: var(--danger); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: bold; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
-        .ai-badge { background: var(--info); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
     </style>
 </head>
 <body>
@@ -34,63 +40,89 @@
 <div class="main-container">
     <div id="register-screen" class="screen active-screen">
         <div class="card" style="max-width: 400px; margin: 60px auto; text-align: center;">
-            <h1>สมัครสมาชิก</h1>
+            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">สมัครสมาชิก</h1>
+            <p style="color: #666; margin-bottom: 25px;">สร้างบัญชี PAY SAVE ของคุณ</p>
             <input type="email" id="reg-email" class="input-field" placeholder="อีเมล">
             <input type="password" id="reg-pass" class="input-field" placeholder="รหัสผ่าน (6 ตัวขึ้นไป)">
             <button class="btn btn-main" onclick="handleRegister()">ลงทะเบียน</button>
-            <p>เป็นสมาชิกอยู่แล้ว? <a href="#" onclick="navigate('login-screen')">เข้าสู่ระบบ</a></p>
+            <p style="margin-top: 15px;">เป็นสมาชิกอยู่แล้ว? <a href="#" onclick="navigate('login-screen')" style="color: var(--primary);">เข้าสู่ระบบ</a></p>
         </div>
     </div>
 
     <div id="login-screen" class="screen">
         <div class="card" style="max-width: 400px; margin: 60px auto; text-align: center;">
-            <h1>เข้าสู่ระบบ</h1>
+            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">PAY SAVE</h1>
+            <p style="color: #666; margin-bottom: 25px;">LOGIN</p>
             <input type="email" id="login-email" class="input-field" placeholder="อีเมล">
             <input type="password" id="login-pass" class="input-field" placeholder="รหัสผ่าน">
-            <button class="btn btn-main" onclick="handleEmailLogin()">เข้าสู่ระบบ</button>
-            <button class="btn btn-google" onclick="loginWithGoogle()">Continue with Google</button>
-            <p>ยังไม่มีบัญชี? <a href="#" onclick="navigate('register-screen')">สมัครสมาชิก</a></p>
+            <button class="btn btn-main" onclick="handleEmailLogin()">login</button>
+            <p style="margin: 10px 0;">หรือ</p>
+            <button class="btn btn-google" onclick="loginWithGoogle()">
+                <span>Continue with Google</span>
+            </button>
+            <p style="margin-top: 15px;">ยังไม่มีบัญชี? <a href="#" onclick="navigate('register-screen')" style="color: var(--primary);">สมัครสมาชิก</a></p>
         </div>
     </div>
 
     <div id="dashboard-screen" class="screen">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div class="header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h2>Dashboard</h2>
-            <button class="btn btn-outline" onclick="logout()">ออกจากระบบ</button>
+            <button class="btn btn-outline" style="width: auto;" onclick="logout()">ออกจากระบบ</button>
         </div>
         <div id="budget-alert-banner" class="alert-banner">⚠️ ค่าไฟเกินงบประมาณที่ตั้งไว้!</div>
-        <div class="card" style="text-align: center;">
-            <p>สถานะอุปกรณ์: <span id="ai-status" class="ai-badge">กำลังวิเคราะห์...</span></p>
-            <div style="display: flex; justify-content: space-around;">
-                <div><p id="dash-watt" class="metric-value">0</p><p class="metric-label">Watts</p></div>
-                <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p class="metric-label">บาทสะสม</p></div>
+        <div class="grid-2">
+            <div class="card" style="text-align: center;">
+                <p style="font-weight:bold;">สถานะปัจจุบัน <span id="ai-status" class="ai-badge">AI กำลังวิเคราะห์...</span></p>
+                <div style="display: flex; justify-content: space-around;">
+                    <div><p id="dash-watt" class="metric-value">0</p><p class="metric-label">Watts</p></div>
+                    <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p class="metric-label">บาทสะสม (PEA)</p></div>
+                </div>
+                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.0000</span> kWh</p>
             </div>
-            <p style="font-size: 0.7rem; color: #999;">หน่วย: <span id="dash-unit">0.0000</span> kWh</p>
+            <div class="card">
+                <div class="chart-box"><canvas id="energyChart"></canvas></div>
+            </div>
         </div>
-        <div class="card"><canvas id="energyChart" style="height:150px;"></canvas></div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 รายงาน & ตั้งค่า</button>
+        <div class="btn-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button class="btn btn-outline" onclick="navigate('daily-screen')">⚡ สถิติรายวัน</button>
+            <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 รายงาน & Export</button>
             <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน <span id="noti-count" style="color:red;">0</span></button>
+            <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 ประวัติอุปกรณ์</button>
+        </div>
+    </div>
+
+    <div id="analysis-screen" class="screen">
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>ประวัติการเปิด-ปิดอุปกรณ์</h2></div>
+        <div class="card">
+            <table>
+                <thead><tr><th>เวลา</th><th>อุปกรณ์</th><th>สถานะ</th><th>Watt</th></tr></thead>
+                <tbody id="appliance-log-body"></tbody>
+            </table>
         </div>
     </div>
 
     <div id="billing-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>รายงาน & ตั้งงบ</h2></div>
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>รายงาน & ตั้งค่า</h2></div>
         <div class="card">
-            <h3>📥 ดาวน์โหลด CSV</h3>
+            <p style="font-weight: bold;">📥 ดาวน์โหลดรายงาน (CSV)</p>
             <input type="date" id="date-picker" class="input-field">
             <button class="btn btn-main" style="background: var(--success);" onclick="exportHistoryDataByDate()">ดาวน์โหลด CSV</button>
         </div>
         <div class="card">
-            <h3>💰 ตั้งงบประมาณ (บาท)</h3>
-            <input type="number" id="budget-input" class="input-field" placeholder="ระบุจำนวนเงิน เช่น 500">
-            <button class="btn btn-main" onclick="saveBudget()">บันทึกงบประมาณ</button>
+            <p style="font-weight: bold;">ตั้งงบประมาณรายเดือน (บาท)</p>
+            <input type="number" id="budget-input" class="input-field" placeholder="ระบุงบ เช่น 500">
+            <button class="btn btn-main" onclick="saveBudget()">บันทึกเป้าหมาย</button>
         </div>
     </div>
 
     <div id="noti-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>การแจ้งเตือน</h2></div>
-        <div id="noti-list" class="card"></div>
+        <div class="header-row"><div><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2 style="display: inline;">การแจ้งเตือน</h2></div><button class="btn btn-outline" onclick="resetNotifications()">ล้างทั้งหมด</button></div>
+        <div id="noti-list" class="card"><p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p></div>
+    </div>
+
+    <div id="daily-screen" class="screen">
+        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
+        <div class="card" style="height: 350px;"><canvas id="dailyChart"></canvas></div>
     </div>
 </div>
 
@@ -108,11 +140,11 @@
     const auth = firebase.auth();
     const dbUrl = firebaseConfig.databaseURL + "/";
 
-    let localTotalUnits = null, lastWatt = 0, energyChart, lastLogMinute = -1;
-    let chartData = Array(15).fill(0), userBudget = localStorage.getItem('paysave_budget') || 0;
-    let hasAlertedBudget = false;
+    let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
+    let chartData = Array(15).fill(0), notiCount = 0, userBudget = localStorage.getItem('paysave_budget') || 0;
+    let hasAlertedBudget = false, lastApplianceState = "";
+    let powerBuffer = [];
 
-    // --- Core Functions ---
     async function getAuthUrl(path) {
         const user = auth.currentUser;
         if (!user) return null;
@@ -122,156 +154,141 @@
 
     async function syncUserProfile(user) {
         const url = await getAuthUrl(`users/${user.uid}`);
-        if (url) {
-            fetch(url, { method: 'PATCH', body: JSON.stringify({ 
-                email: user.email, 
-                lastLogin: new Date().toLocaleString('th-TH'),
-                uid: user.uid 
-            })});
-        }
-    }
-
-    // --- Budget Functions (ดึงกลับมาแล้ว) ---
-    function saveBudget() {
-        const val = document.getElementById('budget-input').value;
-        if (val > 0) {
-            userBudget = parseFloat(val);
-            localStorage.setItem('paysave_budget', userBudget);
-            hasAlertedBudget = false; // Reset แจ้งเตือน
-            alert("บันทึกงบประมาณ " + userBudget + " บาท เรียบร้อยแล้ว");
-            checkBudget(parseFloat(document.getElementById('dash-baht').innerText));
-        }
-    }
-
-    function checkBudget(currentBaht) {
-        const banner = document.getElementById('budget-alert-banner');
-        if (userBudget > 0 && currentBaht > userBudget) {
-            banner.style.display = 'block';
-            if (!hasAlertedBudget) {
-                addNotification("คำเตือน: ค่าไฟ (" + currentBaht.toFixed(2) + " บ.) เกินงบที่ตั้งไว้!", "danger");
-                hasAlertedBudget = true;
-            }
-        } else {
-            banner.style.display = 'none';
-        }
-    }
-
-    // --- CSV & Log Functions ---
-    async function logHistory(watt, unit) {
-        const now = new Date();
-        const dateKey = now.toISOString().split('T')[0];
-        const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-        const url = await getAuthUrl(`history/${dateKey}`);
-        if (url) {
-            fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) });
-        }
-    }
-
-    async function exportHistoryDataByDate() {
-        const date = document.getElementById('date-picker').value;
-        if (!date) return alert("กรุณาเลือกวันที่");
-        const url = await getAuthUrl(`history/${date}`);
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!data) return alert("ไม่พบข้อมูล");
-
-        const rows = [["เวลา", "Watts", "kWh", "บาท"]];
-        Object.values(data).forEach(v => {
-            const unit = parseFloat(v.total) || 0;
-            rows.push([v.time, v.watt, unit.toFixed(4), (unit * 4.42).toFixed(2)]);
-        });
-
-        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
-        const link = document.createElement("a");
-        link.href = encodeURI(csv);
-        link.download = `PAY_SAVE_${date}.csv`;
-        link.click();
-    }
-
-    // --- Data Fetching ---
-    async function fetchData() {
-        try {
-            const url = await getAuthUrl('');
-            if (!url) return;
-            const res = await fetch(url);
-            const data = await res.json();
-            if (!data) return;
-
-            lastWatt = data.current_watt || 0;
-            if (localTotalUnits === null) localTotalUnits = data.total_units || 0;
-            localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
-
-            const patchUrl = await getAuthUrl('');
-            fetch(patchUrl, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
-
-            const currentBaht = localTotalUnits * 4.42;
-            document.getElementById('dash-watt').innerText = lastWatt;
-            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
-            document.getElementById('dash-baht').innerText = currentBaht.toFixed(2);
-
-            checkBudget(currentBaht); // ตรวจสอบงบประมาณทุกครั้งที่อัปเดต
-
-            const now = new Date();
-            if (now.getMinutes() % 5 === 0 && now.getMinutes() !== lastLogMinute) {
-                logHistory(lastWatt, localTotalUnits);
-                lastLogMinute = now.getMinutes();
-            }
-
-            chartData.push(lastWatt); chartData.shift(); energyChart.update('none');
-            document.getElementById('ai-status').innerText = lastWatt < 10 ? "ปิด" : (lastWatt < 500 ? "เครื่องใช้ไฟฟ้าทั่วไป" : "เครื่องใช้ไฟฟ้ากำลังสูง");
-        } catch (e) { console.error(e); }
-    }
-
-    // --- UI & Auth ---
-    function navigate(id) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-        document.getElementById(id).classList.add('active-screen');
-    }
-
-    function addNotification(msg, type) {
-        const list = document.getElementById('noti-list');
-        const div = document.createElement('div');
-        div.className = `noti-item ${type}`;
-        div.innerHTML = `<strong>แจ้งเตือน:</strong> ${msg} <br><small>${new Date().toLocaleString()}</small>`;
-        list.prepend(div);
-        document.getElementById('noti-count').innerText = parseInt(document.getElementById('noti-count').innerText) + 1;
+        if (!url) return;
+        const userData = {
+            displayName: user.displayName || "User",
+            email: user.email,
+            lastLogin: new Date().toLocaleString('th-TH'),
+            uid: user.uid
+        };
+        fetch(url, { method: 'PATCH', body: JSON.stringify(userData) });
     }
 
     function handleRegister() {
         const email = document.getElementById('reg-email').value;
         const pass = document.getElementById('reg-pass').value;
-        auth.createUserWithEmailAndPassword(email, pass).then(res => syncUserProfile(res.user)).catch(e => alert(e.message));
+        auth.createUserWithEmailAndPassword(email, pass)
+            .then(async (result) => {
+                await syncUserProfile(result.user);
+                alert("ลงทะเบียนสำเร็จ!");
+            }).catch(e => alert(e.message));
     }
 
     function handleEmailLogin() {
-        auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-pass').value).catch(e => alert("เข้าสู่ระบบไม่สำเร็จ"));
+        auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-pass').value)
+            .catch(e => alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง"));
     }
 
     function loginWithGoogle() {
-        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message));
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(e => alert(e.message));
     }
 
     function logout() { auth.signOut(); }
 
     auth.onAuthStateChanged((user) => {
-        if (user) { syncUserProfile(user); navigate('dashboard-screen'); startDataFetch(); }
-        else { navigate('login-screen'); stopDataFetch(); }
+        if (user) {
+            syncUserProfile(user);
+            navigate('dashboard-screen');
+            startDataFetch();
+        } else {
+            navigate('login-screen');
+            stopDataFetch();
+        }
     });
 
     let fetchInterval;
     function startDataFetch() { if(!fetchInterval) fetchInterval = setInterval(fetchData, 2000); }
     function stopDataFetch() { clearInterval(fetchInterval); fetchInterval = null; }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
-        if(userBudget > 0) document.getElementById('budget-input').value = userBudget;
-        energyChart = new Chart(document.getElementById('energyChart'), {
-            type: 'line',
-            data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, tension: 0.4 }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    async function fetchData() {
+        try {
+            const url = await getAuthUrl('');
+            if (!url) return;
+            const res = await fetch(url);
+            const data = await res.json();
+            if(!data) return;
+
+            lastWatt = data.current_watt || 0; 
+            if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
+            localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
+            
+            const patchUrl = await getAuthUrl('');
+            fetch(patchUrl, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
+
+            const currentBaht = (localTotalUnits * 4.42);
+            document.getElementById('dash-watt').innerText = lastWatt;
+            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
+            document.getElementById('dash-baht').innerText = currentBaht.toFixed(2);
+
+            // บันทึกข้อมูลประวัติ (เพื่อให้โหลด CSV ได้)
+            const now = new Date();
+            if (now.getMinutes() % 5 === 0 && now.getMinutes() !== lastLogMinute) {
+                logToRate(lastWatt, localTotalUnits, now);
+                lastLogMinute = now.getMinutes();
+            }
+
+            chartData.push(lastWatt); chartData.shift(); energyChart.update('none');
+            analyzeAndLogAppliance(lastWatt);
+        } catch (e) { console.error(e); }
+    }
+
+    async function logToRate(watt, unit, now) {
+        const dateKey = now.toISOString().split('T')[0];
+        const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        const url = await getAuthUrl(`history/${dateKey}`);
+        if (url) { fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) }); }
+    }
+
+    async function exportHistoryDataByDate() {
+        const date = document.getElementById('date-picker').value;
+        if (!date) return alert("เลือกวันที่");
+        const url = await getAuthUrl(`history/${date}`);
+        const res = await fetch(url);
+        const data = await res.json();
+        if(!data) return alert("ไม่มีข้อมูลในวันที่เลือก");
+        const rows = [["เวลา", "Watts", "kWh", "บาท"]];
+        Object.values(data).forEach(v => {
+            const unit = parseFloat(v.total) || 0;
+            rows.push([v.time, v.watt, unit.toFixed(4), (unit * 4.42).toFixed(2)]);
         });
+        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
+        const link = document.createElement("a"); link.href = encodeURI(csv); link.download = `PAY_SAVE_${date}.csv`; link.click();
+    }
+
+    async function analyzeAndLogAppliance(w) {
+        powerBuffer.push(w); if(powerBuffer.length > 5) powerBuffer.shift();
+        let diff = Math.max(...powerBuffer) - Math.min(...powerBuffer);
+        let name = w < 10 ? "ปิด" : (w < 500 ? (diff < 20 ? "ทีวี" : "ตู้เย็น") : "แอร์");
+        document.getElementById('ai-status').innerText = name;
+        if (name !== lastApplianceState && w > 10) {
+            const url = await getAuthUrl(`appliance_logs/${new Date().toISOString().split('T')[0]}`);
+            if (url) fetch(url, { method: 'POST', body: JSON.stringify({ time: new Date().toLocaleTimeString(), appliance: name, watt: w }) });
+            lastApplianceState = name;
+        }
+    }
+
+    function saveBudget() { 
+        userBudget = parseFloat(document.getElementById('budget-input').value); 
+        localStorage.setItem('paysave_budget', userBudget);
+        addNotification(`ตั้งงบใหม่: ${userBudget} บาท`, 'info');
+    }
+
+    function addNotification(msg, type = 'info') {
+        const div = document.createElement('div');
+        div.className = `noti-item ${type}`;
+        div.innerHTML = `${msg} <br><small>${new Date().toLocaleString()}</small>`;
+        document.getElementById('noti-list').prepend(div);
+    }
+
+    function navigate(id) { 
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); 
+        document.getElementById(id).classList.add('active-screen'); 
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        energyChart = new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: Array(15).fill(""), datasets: [{ data: [], borderColor: '#9370DB' }] } });
     });
 </script>
-
 </body>
 </html>
