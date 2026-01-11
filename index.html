@@ -155,19 +155,18 @@
             photoURL: user.photoURL || "",
             lastLogin: new Date().toLocaleString('th-TH'),
             uid: user.uid,
-            provider: user.providerData[0].providerId // บอกว่ามาจาก Password หรือ Google
+            provider: user.providerData[0].providerId 
         };
         fetch(url, { method: 'PATCH', body: JSON.stringify(userData) });
     }
 
-    // แก้ไขฟังก์ชัน Register ให้บันทึกค่าอีเมลทันที
     function handleRegister() {
         const email = document.getElementById('reg-email').value;
         const pass = document.getElementById('reg-pass').value;
         if(pass.length < 6) return alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
         auth.createUserWithEmailAndPassword(email, pass)
             .then(async (result) => {
-                await syncUserProfile(result.user); // เก็บค่าอีเมลลงฐานข้อมูล
+                await syncUserProfile(result.user);
                 alert("ลงทะเบียนและเก็บข้อมูลสมาชิกเรียบร้อย!");
             })
             .catch(e => alert(e.message));
@@ -189,7 +188,7 @@
 
     auth.onAuthStateChanged((user) => {
         if (user) {
-            syncUserProfile(user); // อัปเดตเวลาเข้าใช้งานล่าสุดทุกครั้งที่ Auth เปลี่ยน
+            syncUserProfile(user); 
             navigate('dashboard-screen');
             startDataFetch();
         } else {
@@ -198,7 +197,6 @@
         }
     });
 
-    // [ฟังก์ชันอื่นๆ คงเดิมตามที่สั่งไว้ก่อนหน้า]
     let fetchInterval;
     function startDataFetch() { if(!fetchInterval) fetchInterval = setInterval(fetchData, 2000); }
     function stopDataFetch() { clearInterval(fetchInterval); fetchInterval = null; }
@@ -240,10 +238,49 @@
                 }
             } else { banner.style.display = 'none'; }
 
+            // บันทึกประวัติทุก 5 นาที เพื่อให้มีข้อมูลใน CSV
+            const now = new Date();
+            if (now.getMinutes() % 5 === 0 && now.getMinutes() !== lastLogMinute) {
+                logToRate(lastWatt, localTotalUnits, now);
+                lastLogMinute = now.getMinutes();
+            }
+
             chartData.push(lastWatt); chartData.shift(); energyChart.update('none');
             analyzeAndLogAppliance(lastWatt);
         } catch (e) { console.error(e); }
     }
+
+    // --- ฟังก์ชันสำหรับการจัดการข้อมูล CSV ---
+    async function logToRate(watt, unit, now) {
+        const dateKey = now.toISOString().split('T')[0];
+        const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        const url = await getAuthUrl(`history/${dateKey}`);
+        if (url) { 
+            fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) }); 
+        }
+    }
+
+    async function exportHistoryDataByDate() {
+        const date = document.getElementById('date-picker').value;
+        if (!date) return alert("เลือกวันที่");
+        const url = await getAuthUrl(`history/${date}`);
+        const res = await fetch(url);
+        const data = await res.json();
+        if(!data) return alert("ไม่มีข้อมูลในวันที่เลือก");
+        
+        const rows = [["เวลา", "กำลังไฟฟ้า (Watts)", "หน่วยสะสม (kWh)", "ยอดเงินสะสม (บาท)"]];
+        Object.values(data).forEach(v => {
+            const unit = parseFloat(v.total) || 0;
+            rows.push([v.time, (v.watt || 0) + " W", unit.toFixed(4) + " kWh", (unit * 4.42).toFixed(2) + " บาท"]);
+        });
+        
+        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
+        const link = document.createElement("a");
+        link.href = encodeURI(csv);
+        link.download = `Paysave_Report_${date}.csv`;
+        link.click();
+    }
+    // ----------------------------------------
 
     async function analyzeAndLogAppliance(w) {
         powerBuffer.push(w);
