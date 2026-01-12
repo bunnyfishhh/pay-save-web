@@ -3,218 +3,370 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href='data:application/manifest+json,{"name": "JINBAO Nutrition", "short_name": "JINBAO", "description": "แอปคุมแคลอรี่โดยแมวส้มจินเป่า", "start_url": "/", "display": "standalone", "orientation": "portrait", "background_color": "#fff7ed", "theme_color": "#fb923c", "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/802/802353.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}]}'>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="JINBAO">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/802/802353.png">
+    
     <title>JINBAO - แมวส้มคุมแคล!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
-        :root { --primary: #fb923c; --primary-dark: #ea580c; --bg: #fff7ed; }
-        body { font-family: 'Kanit', sans-serif; background: var(--bg); color: #431407; margin: 0; }
-        
-        .screen { display: none; animation: fadeIn 0.3s ease; }
-        .active-screen { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .card { background: white; border-radius: 2rem; border: 3px solid #fed7aa; box-shadow: 0 8px 0 #fed7aa; padding: 25px; margin-bottom: 20px; }
-        .input-field { width: 100%; padding: 15px; border: 2px solid #f3f4f6; border-radius: 1.2rem; outline: none; text-align: center; font-family: 'Kanit'; font-weight: bold; margin-bottom: 15px; }
-        .btn { padding: 15px; border-radius: 1.2rem; border: none; font-weight: 800; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; font-size: 1.1rem; }
-        .btn-main { background: var(--primary); color: white; border-bottom: 5px solid var(--primary-dark); }
-        .btn-main:active { border-bottom: 0; transform: translateY(5px); }
-        .btn-google { background: white; border: 2px solid #f3f4f6; border-bottom: 4px solid #e5e7eb; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        
+        body { font-family: 'Kanit', sans-serif; background: #fff7ed; color: #431407; padding-bottom: 50px; }
+        .duo-card { background: white; border-radius: 2rem; border: 2px solid #fed7aa; box-shadow: 0 8px 0 #fed7aa; }
+        .btn-orange { background: #fb923c; border-bottom: 5px solid #ea580c; color: white; transition: 0.1s; cursor: pointer; }
+        .btn-orange:active { border-bottom: 0; transform: translateY(5px); }
         .progress-bar { transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .btn-remove-img { background: #ef4444; border: 2px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         #saveToast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #7c2d12; color: white; padding: 12px 24px; border-radius: 999px; font-weight: bold; transition: 0.4s; opacity: 0; z-index: 100; text-align: center; width: 80%; max-width: 300px; }
         #saveToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        #loginScreen { background: #fff7ed; position: fixed; inset: 0; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .login-card { width: 100%; max-width: 350px; background: white; padding: 30px; border-radius: 2.5rem; border: 3px solid #fed7aa; box-shadow: 0 10px 0 #fed7aa; text-align: center; }
+        .water-tank { width: 85px; height: 150px; border: 4px solid #bae6fd; border-radius: 1.5rem; position: relative; overflow: hidden; background: #f0f9ff; box-shadow: 0 4px 0 #bae6fd; }
+        .water-level { position: absolute; bottom: 0; left: 0; width: 100%; background: #0ea5e9; transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+        .water-wave { position: absolute; top: -10px; left: 0; width: 200%; height: 20px; background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 120 28" xmlns="http://www.w3.org/2000/svg"><path d="M0 15 Q30 0 60 15 T120 15 V28 H0 Z" fill="%230ea5e9"/></svg>'); background-size: 50% 100%; animation: wave 2s linear infinite; }
+        @keyframes wave { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
 </head>
 <body class="p-4">
 
-    <div id="register-screen" class="screen">
-        <div class="card max-w-sm mx-auto mt-10 text-center">
-            <img src="https://cdn-icons-png.flaticon.com/512/802/802353.png" class="w-20 mx-auto mb-4">
-            <h1 class="text-3xl font-black text-orange-600 mb-2">สร้างบัญชีใหม่</h1>
-            <p class="text-orange-400 mb-6">เริ่มคุมแคลกับจินเป่าเมี้ยว!</p>
-            <input type="email" id="reg-email" class="input-field" placeholder="อีเมล">
-            <input type="password" id="reg-pass" class="input-field" placeholder="รหัสผ่าน (6 ตัวขึ้นไป)">
-            <button class="btn btn-main" onclick="window.handleRegister()">ลงทะเบียน</button>
-            <p class="mt-4">เป็นทาสแมวอยู่แล้ว? <a href="#" onclick="navigate('login-screen')" class="text-orange-600 font-bold">เข้าสู่ระบบ</a></p>
+    <div id="loginScreen">
+        <div class="login-card space-y-6">
+            <div class="text-6xl animate-bounce">🐱</div>
+            <h1 class="text-3xl font-black text-orange-600">ยินดีต้อนรับเมี้ยว!</h1>
+            <input type="text" id="usernameInput" placeholder="ตั้งชื่อเล่นของคุณ" class="w-full p-4 border-2 border-orange-100 rounded-2xl text-center font-bold outline-none focus:border-orange-500 shadow-inner">
+            <button onclick="handleLogin()" class="w-full btn-orange py-4 rounded-2xl text-xl font-black uppercase tracking-widest">เริ่มใช้งานเลย!</button>
         </div>
     </div>
 
-    <div id="login-screen" class="screen active-screen">
-        <div class="card max-w-sm mx-auto mt-10 text-center">
-            <img src="https://cdn-icons-png.flaticon.com/512/802/802353.png" class="w-20 mx-auto mb-4">
-            <h1 class="text-4xl font-black text-orange-600 mb-2">JINBAO</h1>
-            <p class="text-orange-400 mb-6">LOGIN</p>
-            <input type="email" id="login-email" class="input-field" placeholder="อีเมล">
-            <input type="password" id="login-pass" class="input-field" placeholder="รหัสผ่าน">
-            <button class="btn btn-main" onclick="window.handleEmailLogin()">เข้าสู่ระบบ</button>
-            <p class="my-4 font-bold text-orange-200">OR</p>
-            <button class="btn btn-google" onclick="window.handleGoogleLogin()">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" class="w-5">
-                <span>Continue with Google</span>
-            </button>
-            <p class="mt-6">ยังไม่มีบัญชี? <a href="#" onclick="navigate('register-screen')" class="text-orange-600 font-bold">สมัครสมาชิกเมี้ยว</a></p>
-        </div>
-    </div>
+    <div id="saveToast">🐱 บันทึกเรียบร้อยแล้วเมี้ยว!</div>
 
-    <div id="mainApp" class="screen max-w-md mx-auto space-y-6">
-        <div id="saveToast">🐱 บันทึกเรียบร้อยแล้วเมี้ยว!</div>
-
+    <div id="mainApp" class="hidden max-w-md mx-auto space-y-6">
         <header class="flex justify-between items-center bg-white p-4 rounded-2xl border-2 border-orange-200 shadow-sm">
             <div class="flex items-center gap-4">
-                <div class="flex items-center gap-1"><span class="text-xl">🔥</span><span id="streakDisplay" class="text-lg font-black text-orange-500">1</span></div>
-                <div class="flex items-center gap-1"><span class="text-xl">🪙</span><span id="coinDisplay" class="text-lg font-black text-yellow-600">0</span></div>
+                <div class="flex items-center gap-1">
+                    <span class="text-xl">🔥</span>
+                    <span id="streakDisplay" class="text-lg font-black text-orange-500">1</span>
+                </div>
+                <div class="flex items-center gap-1">
+                    <span class="text-xl">🪙</span>
+                    <span id="coinDisplay" class="text-lg font-black text-yellow-600">0</span>
+                </div>
             </div>
-            <h1 class="text-2xl font-black text-orange-600 tracking-tight leading-none text-center">JINBAO<br><span id="userTag" class="text-[10px] font-bold text-orange-300 uppercase"></span></h1>
+            <div class="text-center">
+                <h1 class="text-2xl font-black text-orange-600 tracking-tight">JINBAO</h1>
+                <p id="helloUser" class="text-[10px] font-bold text-orange-300 uppercase"></p>
+            </div>
             <div id="catEmojiHeader" class="text-3xl transition-transform duration-500">🐱</div> 
         </header>
 
-        <section class="card text-center">
+        <section class="duo-card p-6 text-center">
             <div id="catStatusMsg" class="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-2 italic">พร้อมคุมแคลหรือยังเมี้ยว?</div>
             <p class="text-orange-400 font-bold text-xs uppercase mb-1 tracking-widest">วันนี้กินได้อีก</p>
             <h2 id="remainingCal" class="text-6xl font-black text-orange-950 mb-3">0</h2>
             <div class="w-full bg-orange-50 h-5 rounded-full overflow-hidden border-2 border-orange-100">
                 <div id="progressFill" class="progress-bar h-full bg-orange-500" style="width: 0%"></div>
             </div>
-            <p class="mt-3 text-sm font-bold text-orange-800"><span id="totalConsumed">0</span> / 1922 kcal</p>
+            <p class="mt-3 text-sm font-bold text-orange-800"><span id="totalConsumed">0</span> / <span id="dailyGoalDisplay">1922</span> kcal</p>
         </section>
 
-        <details class="card p-4 overflow-hidden group">
+        <section class="duo-card p-6 flex items-center justify-between gap-4 relative overflow-hidden">
+            <div class="flex-1 text-left z-10">
+                <h3 class="text-lg font-black text-sky-600 mb-1 flex items-center gap-2">💧 แทงค์น้ำแมวส้ม</h3>
+                <p class="text-[10px] font-bold text-sky-400 uppercase mb-4 tracking-tighter">ดื่มน้ำรับ 10 🪙 / <span id="waterText">0</span> / <span id="waterGoal">2000</span> ML</p>
+                <div class="flex flex-wrap gap-2 mb-3">
+                    <button onclick="addWater(300)" class="bg-sky-50 text-sky-600 font-black py-2 px-4 rounded-xl text-xs border-2 border-sky-100 active:scale-95 transition">+ 300ml</button>
+                    <button onclick="addWater(600)" class="bg-sky-500 text-white font-black py-2 px-4 rounded-xl text-xs shadow-sm active:scale-95 transition">+ 600ml</button>
+                    <button onclick="resetWater()" class="text-sky-300 hover:text-sky-500 transition"><i class="fas fa-undo"></i></button>
+                </div>
+                <div class="flex gap-2">
+                    <input type="number" id="customWater" placeholder="ml" class="w-16 p-2 border-2 border-sky-50 rounded-xl outline-none focus:border-sky-300 font-bold text-xs text-center bg-sky-50/30">
+                    <button onclick="addCustomWater()" class="bg-sky-600 text-white px-3 rounded-xl font-black text-xs active:scale-90"><i class="fas fa-plus"></i></button>
+                </div>
+            </div>
+            <div class="water-tank shrink-0 z-10">
+                <div id="waterLevel" class="water-level" style="height: 0%"><div class="water-wave"></div></div>
+            </div>
+            <div id="waterCheer" class="absolute bottom-2 right-28 text-[10px] font-bold text-sky-400 italic opacity-0 transition-opacity">เยี่ยมมากมนุษย์!</div>
+        </section>
+
+        <details class="duo-card p-4 overflow-hidden group">
             <summary class="list-none cursor-pointer flex justify-between items-center font-black text-orange-400 uppercase text-sm">
-                <span>🍽️ บันทึกมื้อนี้เมี้ยว</span><i class="fas fa-chevron-down"></i>
+                <span>🍽️ บันทึกมื้อนี้เมี้ยว</span>
+                <i class="fas fa-chevron-down transition-transform group-open:rotate-180"></i>
             </summary>
-            <div class="mt-4 space-y-4 pt-4 border-t-2 border-orange-50">
-                <input type="text" id="foodInput" placeholder="กินอะไรเข้าไป?" class="input-field">
-                <input type="number" id="calInput" placeholder="กี่แคลอรี่?" class="input-field text-2xl text-orange-600">
-                <button id="btnSave" class="btn btn-main">บันทึกรับ 5 🪙!</button>
+            <div class="mt-4 space-y-4 border-t-2 pt-4 border-orange-50">
+                <div class="mb-4 h-44 flex flex-col justify-center border-4 border-dashed border-orange-100 rounded-3xl text-center relative overflow-hidden bg-orange-50/50">
+                    <input type="file" id="imageInput" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*">
+                    <div id="previewContainer" class="hidden absolute inset-0 bg-white">
+                        <img id="imagePreview" class="w-full h-full object-cover">
+                        <button id="btnRemoveImg" class="btn-remove-img absolute top-3 right-3 w-10 h-10 rounded-full text-white flex items-center justify-center z-10"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div id="uploadPrompt" class="space-y-2"><i class="fas fa-camera text-4xl text-orange-200"></i><p class="text-orange-300 text-xs font-bold">ถ่ายรูปให้แมวดูหน่อย</p></div>
+                </div>
+                <div class="space-y-4">
+                    <input type="text" id="foodInput" list="foodList" placeholder="กินอะไรเข้าไป?" class="w-full p-4 border-2 rounded-2xl outline-none focus:border-orange-500 font-medium bg-white text-lg border-orange-100">
+                    <datalist id="foodList"><option value="ข้าวมันไก่">596 kcal</option><option value="ข้าวกะเพราไก่">550 kcal</option></datalist>
+                    <input type="number" id="calInput" placeholder="กี่แคลอรี่?" class="w-full p-4 border-2 rounded-2xl outline-none focus:border-orange-500 font-black text-3xl text-orange-600 bg-white text-center border-orange-100">
+                    <button id="btnSave" class="w-full btn-orange py-5 rounded-2xl text-2xl font-black uppercase tracking-wider">บันทึกรับ 5 🪙!</button>
+                </div>
+            </div>
+        </details>
+
+        <details class="duo-card p-4 overflow-hidden group">
+            <summary class="list-none cursor-pointer flex justify-between items-center font-black text-sky-500 uppercase text-sm">
+                <span>📊 สรุปผลรายสัปดาห์</span>
+                <i class="fas fa-chart-line"></i>
+            </summary>
+            <div class="mt-4 p-4 bg-sky-50 rounded-2xl border-t-2 border-sky-100 space-y-2">
+                <p class="text-xs font-bold text-sky-800 flex justify-between"><span>น้ำดื่มสะสม (7 วัน):</span> <span id="weeklyWater">0</span> ML</p>
+                <p class="text-xs font-bold text-sky-800 flex justify-between"><span>แคลอรี่เฉลี่ย:</span> <span id="weeklyCal">0</span> KCAL</p>
+            </div>
+        </details>
+
+        <details class="duo-card p-4 overflow-hidden group">
+            <summary class="list-none cursor-pointer flex justify-between items-center font-black text-purple-600 uppercase text-sm">
+                <span>👕 ตู้เสื้อผ้าจินเป่า (🪙 <span id="coinShopText">0</span>)</span>
+                <i class="fas fa-tshirt"></i>
+            </summary>
+            <div id="skinShop" class="mt-4 grid grid-cols-3 gap-3 border-t-2 pt-4 border-purple-50"></div>
+        </details>
+
+        <details class="duo-card p-4 overflow-hidden group">
+            <summary class="list-none cursor-pointer flex justify-between items-center font-black text-orange-400 uppercase text-sm">
+                <span>⚙️ ตั้งค่า & การแจ้งเตือน</span>
+                <i class="fas fa-chevron-down transition-transform group-open:rotate-180"></i>
+            </summary>
+            <div class="mt-4 space-y-4 border-t-2 pt-4 border-orange-50">
+                <div class="grid grid-cols-2 gap-3">
+                    <select id="gender" class="p-3 border-2 rounded-xl bg-orange-50 border-orange-100 font-bold"><option value="male">ชาย</option><option value="female">หญิง</option></select>
+                    <input type="number" id="age" placeholder="อายุ" class="p-3 border-2 rounded-xl bg-orange-50 border-orange-100 font-bold">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <input type="number" id="weight" placeholder="น้ำหนัก (kg)" class="p-3 border-2 rounded-xl bg-orange-50 border-orange-100 font-bold">
+                    <input type="number" id="height" placeholder="ส่วนสูง (cm)" class="p-3 border-2 rounded-xl bg-orange-50 border-orange-100 font-bold">
+                </div>
+                <button id="btnUpdateGoal" class="w-full bg-orange-500 text-white font-black py-3 rounded-xl shadow-md">คำนวณเป้าหมาย</button>
+                <button onclick="handleLogout()" class="w-full py-3 mt-4 bg-red-50 text-red-500 border-2 border-red-100 rounded-2xl font-black text-sm active:scale-95 transition">
+                    <i class="fas fa-sign-out-alt mr-2"></i> ออกจากระบบเมี้ยว
+                </button>
             </div>
         </details>
 
         <section>
-            <h3 class="text-lg font-black text-orange-950 mb-3 italic">History Today</h3>
+            <h3 class="text-lg font-black text-orange-950 mb-3 italic flex justify-between px-2">
+                <span>History Today</span>
+                <span class="text-orange-500">🐈 Meow Streak!</span>
+            </h3>
             <div id="historyList" class="space-y-3"></div>
         </section>
-
-        <button onclick="window.handleLogout()" class="w-full py-4 bg-red-50 text-red-500 rounded-3xl font-black text-sm border-2 border-red-100">ออกจากระบบเมี้ยว</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // Firebase Config ของคุณ
-        const firebaseConfig = { 
-            apiKey: "AIzaSyBOj2rySPpmc8NH3GmtXBZEO2o0Z0IwwuI", 
-            authDomain: "jinpao-nutration.firebaseapp.com", 
-            projectId: "jinpao-nutration", 
-            storageBucket: "jinpao-nutration.firebasestorage.app", 
-            appId: "1:847606006040:web:94b8acba2fbe49fa9bde6d" 
-        };
-        
+        const firebaseConfig = { apiKey: "AIzaSyBOj2rySPpmc8NH3GmtXBZEO2o0Z0IwwuI", authDomain: "jinpao-nutration.firebaseapp.com", projectId: "jinpao-nutration", storageBucket: "jinpao-nutration.firebasestorage.app", appId: "1:847606006040:web:94b8acba2fbe49fa9bde6d" };
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        const auth = getAuth(app);
-        const googleProvider = new GoogleAuthProvider();
 
-        let currentUser = null;
-
-        // --- NAVIGATION ---
-        window.navigate = (id) => {
-            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
-            document.getElementById(id).classList.add('active-screen');
+        // --- ระบบ User & Login ---
+        window.handleLogin = () => {
+            const user = document.getElementById('usernameInput').value;
+            if (!user) return alert("บอกชื่อเล่นแมวหน่อยเมี้ยว!");
+            localStorage.setItem('jinbao_user', user);
+            if (!localStorage.getItem('jinbao_start_date')) localStorage.setItem('jinbao_start_date', new Date().toISOString());
+            checkUserStatus();
         };
 
-        // --- AUTH FUNCTIONS ---
-        window.handleRegister = async () => {
-            const email = document.getElementById('reg-email').value;
-            const pass = document.getElementById('reg-pass').value;
-            try { 
-                await createUserWithEmailAndPassword(auth, email, pass);
-                alert("สมัครสมาชิกสำเร็จ!");
-            } catch(e) { alert("สมัครไม่สำเร็จ: " + e.message); }
-        };
-
-        window.handleEmailLogin = async () => {
-            const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-pass').value;
-            try { await signInWithEmailAndPassword(auth, email, pass); } 
-            catch(e) { alert("อีเมลหรือรหัสผ่านผิดเมี้ยว!"); }
-        };
-
-        window.handleGoogleLogin = async () => {
-            try { await signInWithPopup(auth, googleProvider); } 
-            catch(e) { console.error(e); }
-        };
-
-        window.handleLogout = () => signOut(auth);
-
-        // --- AUTH STATE MONITOR ---
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                navigate('mainApp');
-                document.getElementById('userTag').innerText = user.email.split('@')[0];
-                renderData();
-            } else {
-                currentUser = null;
-                navigate('login-screen');
+        window.handleLogout = () => {
+            if(confirm("ออกจากระบบเมี้ยว?")) {
+                localStorage.removeItem('jinbao_user'); 
+                localStorage.removeItem('jinbao_start_date');
+                location.reload();
             }
-        });
+        };
 
-        // --- MAIN APP LOGIC ---
-        document.getElementById('btnSave').onclick = async () => {
-            if(!currentUser) return;
-            const name = document.getElementById('foodInput').value, cal = parseFloat(document.getElementById('calInput').value);
-            if(!name || isNaN(cal)) return alert("ใส่ข้อมูลให้ครบ!");
-            
-            await addDoc(collection(db, "food_logs"), { 
-                uid: currentUser.uid, 
-                foodName: name, 
-                calories: cal, 
-                timestamp: serverTimestamp(), 
-                date: new Date().toLocaleDateString() 
+        function checkUserStatus() {
+            const user = localStorage.getItem('jinbao_user');
+            if (user) {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('helloUser').innerText = `สวัสดีมนุษย์ ${user}!`;
+                updateStreak(); updateWaterUI(); initShop(); renderData();
+            }
+        }
+
+        // --- 🪙 ระบบเหรียญ & สกิน ---
+        let coins = parseInt(localStorage.getItem('jinbao_coins') || 0);
+        let unlockedSkins = JSON.parse(localStorage.getItem('jinbao_unlocked_skins') || '["🐱"]');
+        let currentSkin = localStorage.getItem('jinbao_skin') || "🐱";
+        const skins = [
+            {e: "🐱", p: 0}, {e: "🦁", p: 50}, {e: "🐯", p: 100}, 
+            {e: "🕵️", p: 200}, {e: "👨‍🚀", p: 500}, {e: "👑", p: 1000}
+        ];
+
+        function initShop() {
+            const shop = document.getElementById('skinShop'); if(!shop) return;
+            shop.innerHTML = "";
+            skins.forEach(s => {
+                const isUnlocked = unlockedSkins.includes(s.e);
+                shop.innerHTML += `<button onclick="window.changeSkin('${s.e}', ${s.p})" class="p-2 border-2 rounded-2xl flex flex-col items-center ${isUnlocked ? 'bg-purple-50 border-purple-200' : 'opacity-50 border-slate-100'}"><span class="text-2xl">${s.e}</span><span class="text-[8px] font-bold mt-1">${isUnlocked ? 'ใส่ชุด' : s.p + ' 🪙'}</span></button>`;
             });
-            
+            updateCoinDisplay();
+        }
+
+        function updateCoinDisplay() {
+            document.getElementById('coinDisplay').innerText = coins;
+            document.getElementById('coinShopText').innerText = coins;
+            document.getElementById('catEmojiHeader').innerText = currentSkin;
+        }
+
+        window.changeSkin = (e, p) => {
+            if (unlockedSkins.includes(e)) { 
+                currentSkin = e; 
+                localStorage.setItem('jinbao_skin', e); 
+                initShop(); 
+            } else if (coins >= p) { 
+                if(confirm(`ซื้อชุด ${e} ราคา ${p} 🪙?`)) { 
+                    coins -= p; unlockedSkins.push(e); 
+                    localStorage.setItem('jinbao_coins', coins); 
+                    localStorage.setItem('jinbao_unlocked_skins', JSON.stringify(unlockedSkins)); 
+                    initShop(); 
+                } 
+            } else alert("เหรียญไม่พอเมี้ยว!");
+        };
+
+        // --- Image Preview ---
+        document.getElementById('imageInput').onchange = (e) => {
+            const [file] = e.target.files;
+            if (file) {
+                document.getElementById('imagePreview').src = URL.createObjectURL(file);
+                document.getElementById('previewContainer').classList.remove('hidden');
+            }
+        };
+
+        document.getElementById('btnRemoveImg').onclick = () => {
+            document.getElementById('imageInput').value = "";
+            document.getElementById('previewContainer').classList.add('hidden');
+        };
+
+        // --- อารมณ์แมว & เกรด ---
+        function updateCatEmotion(calPercent, waterPercent) {
+            const emoji = document.getElementById('catEmojiHeader');
+            const msg = document.getElementById('catStatusMsg');
+            if (calPercent > 100) { emoji.innerText = "🙀"; msg.innerText = "แคลเกินแล้ว! ตัวพองแล้วเมี้ยว!"; }
+            else if (waterPercent >= 100) { emoji.innerText = "😇"; msg.innerText = "ดื่มน้ำครบ สุขภาพดีจังเมี้ยว!"; }
+            else if (calPercent > 85) { emoji.innerText = "😰"; msg.innerText = "ระวัง! แคลใกล้เต็มแล้วเมี้ยว"; }
+            else { emoji.innerText = currentSkin; msg.innerText = "พร้อมคุมแคลหรือยังเมี้ยว?"; }
+        }
+
+        function getFoodGrade(cal) {
+            const mealTarget = (localStorage.getItem('jinpao_goal') || 1922) / 3;
+            if (cal <= mealTarget) return { g: "A", c: "text-green-500" };
+            if (cal <= mealTarget * 1.5) return { g: "B", c: "text-orange-500" };
+            return { g: "C", c: "text-red-500" };
+        }
+
+        // --- Streak ---
+        function updateStreak() {
+            const startDateStr = localStorage.getItem('jinbao_start_date');
+            if (!startDateStr) return;
+            const diffDays = Math.ceil(Math.abs(new Date() - new Date(startDateStr)) / (1000 * 60 * 60 * 24)); 
+            document.getElementById('streakDisplay').innerText = diffDays;
+        }
+
+        // --- ระบบน้ำ ---
+        let waterDrank = parseInt(localStorage.getItem('jinbao_water_drank') || 0);
+        let waterGoal = parseInt(localStorage.getItem('jinbao_water_goal') || 2000);
+
+        window.addWater = (amount) => {
+            waterDrank += amount; localStorage.setItem('jinbao_water_drank', waterDrank);
+            if (waterDrank <= waterGoal) { coins += 10; localStorage.setItem('jinbao_coins', coins); }
+            updateWaterUI(); renderData();
+            showCheer();
+        };
+
+        window.addCustomWater = () => {
+            const val = parseInt(document.getElementById('customWater').value);
+            if (!val || val <= 0) return alert("ใส่เลขก่อน!");
+            addWater(val); document.getElementById('customWater').value = "";
+        };
+
+        window.resetWater = () => { if (confirm("ล้างแทงค์?")) { waterDrank = 0; localStorage.setItem('jinbao_water_drank', 0); updateWaterUI(); renderData(); } };
+
+        function updateWaterUI() {
+            document.getElementById('waterText').innerText = waterDrank;
+            document.getElementById('waterGoal').innerText = waterGoal;
+            let percent = Math.min((waterDrank / waterGoal) * 100, 100);
+            document.getElementById('waterLevel').style.height = percent + '%';
+        }
+
+        function showCheer() {
+            const cheer = document.getElementById('waterCheer');
+            cheer.style.opacity = "1"; setTimeout(() => cheer.style.opacity = "0", 2000);
+        }
+
+        // --- แคลอรี่ & Firebase ---
+        let dailyGoal = localStorage.getItem('jinpao_goal') || 1922;
+
+        document.getElementById('btnSave').onclick = async () => {
+            const name = document.getElementById('foodInput').value, cal = parseFloat(document.getElementById('calInput').value);
+            if(!name || isNaN(cal)) return alert("ใส่ข้อมูลมื้ออาหาร!");
+            await addDoc(collection(db, "food_logs"), { foodName: name, calories: cal, timestamp: serverTimestamp(), date: new Date().toLocaleDateString() });
+            coins += 5; localStorage.setItem('jinbao_coins', coins);
             document.getElementById('foodInput').value = ""; document.getElementById('calInput').value = "";
-            showToast("🐱 บันทึกแล้วเมี้ยว!");
+            document.getElementById('previewContainer').classList.add('hidden');
+            showToast("🐱 บันทึกเรียบร้อยแล้วเมี้ยว!");
             renderData();
         };
 
         async function renderData() {
-            if(!currentUser) return;
-            const list = document.getElementById('historyList'); 
+            const list = document.getElementById('historyList'); if(!list) return;
+            list.innerHTML = ""; let total = 0;
             const today = new Date().toLocaleDateString();
-            let total = 0;
-
-            const q = query(
-                collection(db, "food_logs"), 
-                where("uid", "==", currentUser.uid),
-                orderBy("timestamp", "desc")
-            );
-
-            const snap = await getDocs(q);
-            list.innerHTML = "";
+            const snap = await getDocs(query(collection(db, "food_logs"), orderBy("timestamp", "desc")));
+            let weeklyCalTotal = 0;
             
             snap.forEach(item => {
                 const d = item.data();
                 if(d.date === today) {
                     total += d.calories;
-                    list.innerHTML += `<div class="bg-white p-4 rounded-2xl border-2 border-orange-100 flex justify-between items-center shadow-sm">
-                        <div><p class="font-black text-orange-950">${d.foodName}</p><p class="text-orange-600 font-bold">${d.calories} kcal</p></div>
+                    const grade = getFoodGrade(d.calories);
+                    list.innerHTML += `<div class="bg-white p-4 rounded-2xl border-2 border-orange-100 flex justify-between items-center mb-2 shadow-sm">
+                        <div><p class="font-black text-orange-950">${d.foodName} <span class="${grade.c}">(${grade.g})</span></p><p class="text-orange-600 font-bold">${d.calories} kcal</p></div>
                         <button onclick="window.delItem('${item.id}')" class="text-orange-200"><i class="fas fa-times-circle text-2xl"></i></button>
                     </div>`;
                 }
+                weeklyCalTotal += d.calories;
             });
 
-            document.getElementById('totalConsumed').innerText = total;
-            document.getElementById('remainingCal').innerText = Math.max(0, 1922 - total);
-            document.getElementById('progressFill').style.width = Math.min(100, (total / 1922) * 100) + "%";
+            document.getElementById('remainingCal').innerText = Math.max(0, dailyGoal - total).toLocaleString();
+            document.getElementById('totalConsumed').innerText = total.toLocaleString();
+            document.getElementById('dailyGoalDisplay').innerText = dailyGoal;
+            document.getElementById('progressFill').style.width = Math.min(100, (total / dailyGoal) * 100) + "%";
+            
+            document.getElementById('weeklyWater').innerText = waterDrank;
+            document.getElementById('weeklyCal').innerText = Math.round(weeklyCalTotal / 7);
+            updateCatEmotion((total / dailyGoal) * 100, (waterDrank / waterGoal) * 100);
+            updateCoinDisplay();
         }
 
+        document.getElementById('btnUpdateGoal').onclick = () => {
+            const w = parseFloat(document.getElementById('weight').value), h = parseFloat(document.getElementById('height').value), a = parseFloat(document.getElementById('age').value), g = document.getElementById('gender').value;
+            if(!w || !h || !a) return alert("ใส่ข้อมูลให้ครบ!");
+            let bmr = (10 * w) + (6.25 * h) - (5 * a); bmr = (g === 'male') ? bmr + 5 : bmr - 161;
+            dailyGoal = Math.round(bmr * 1.375 - 500); localStorage.setItem('jinpao_goal', dailyGoal);
+            waterGoal = Math.round(w * 33); localStorage.setItem('jinbao_water_goal', waterGoal);
+            renderData(); updateWaterUI(); showToast("🐱 อัปเดตข้อมูลแล้ว!");
+        };
+
         window.delItem = async (id) => { if(confirm("ลบเมี้ยว?")) { await deleteDoc(doc(db, "food_logs", id)); renderData(); } };
-        function showToast(msg) { const t = document.getElementById('saveToast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+        function showToast(msg) { const toast = document.getElementById('saveToast'); toast.innerText = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 3000); }
+
+        checkUserStatus();
     </script>
 </body>
 </html>
