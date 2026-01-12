@@ -3,408 +3,218 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAY SAVE - AI Energy Identification 100%</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <title>JINBAO - แมวส้มคุมแคล!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --primary: #9370DB; --secondary: #e67e22; --success: #28a745; --danger: #dc3545; --bg: #f4f7f9; --card: #ffffff; --info: #17a2b8; }
-        body { font-family: 'Kanit', sans-serif; margin: 0; background-color: var(--bg); color: #333; }
-        .main-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-        .screen { display: none; flex-direction: column; animation: fadeIn 0.3s ease; }
-        .active-screen { display: flex; }
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+        :root { --primary: #fb923c; --primary-dark: #ea580c; --bg: #fff7ed; }
+        body { font-family: 'Kanit', sans-serif; background: var(--bg); color: #431407; margin: 0; }
+        
+        .screen { display: none; animation: fadeIn 0.3s ease; }
+        .active-screen { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .card { background: var(--card); border-radius: 15px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .input-field { width: 100%; padding: 15px; border: 1px solid #ddd; border-radius: 10px; box-sizing: border-box; font-family: 'Kanit'; font-size: 16px; margin-bottom: 15px; outline: none; }
-        .btn { padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; margin-bottom: 10px; font-size: 16px; }
-        .btn-main { background: var(--primary); color: white; }
-        .btn-google { background: steelblue; color: #ffffff; display: flex; align-items: center; justify-content: center; gap: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .btn-google:hover { background: #1a1a1a; }
-        .btn-outline { background: white; border: 1px solid #ddd; width: auto; }
-        .btn-back { font-size: 24px; text-decoration: none; color: var(--primary); margin-right: 15px; cursor: pointer; display: inline-block; }
-        .metric-value { font-size: 2.5rem; font-weight: bold; color: var(--primary); margin: 0; }
-        .metric-label { font-size: 0.9rem; color: #666; }
-        .chart-box { position: relative; height: 180px; width: 100%; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        .noti-item { border-left: 5px solid var(--info); margin-bottom: 10px; padding: 15px; background: #f0f7ff; border-radius: 8px; font-size: 0.9rem; }
-        .noti-item.danger { border-left-color: var(--danger); background: #fff5f5; }
-        .ai-badge { background: var(--info); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; }
-        .alert-banner { display: none; background-color: var(--danger); color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; text-align: center; font-weight: bold; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+
+        .card { background: white; border-radius: 2rem; border: 3px solid #fed7aa; box-shadow: 0 8px 0 #fed7aa; padding: 25px; margin-bottom: 20px; }
+        .input-field { width: 100%; padding: 15px; border: 2px solid #f3f4f6; border-radius: 1.2rem; outline: none; text-align: center; font-family: 'Kanit'; font-weight: bold; margin-bottom: 15px; }
+        .btn { padding: 15px; border-radius: 1.2rem; border: none; font-weight: 800; cursor: pointer; transition: 0.2s; font-family: 'Kanit'; width: 100%; font-size: 1.1rem; }
+        .btn-main { background: var(--primary); color: white; border-bottom: 5px solid var(--primary-dark); }
+        .btn-main:active { border-bottom: 0; transform: translateY(5px); }
+        .btn-google { background: white; border: 2px solid #f3f4f6; border-bottom: 4px solid #e5e7eb; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        
+        .progress-bar { transition: width 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #saveToast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: #7c2d12; color: white; padding: 12px 24px; border-radius: 999px; font-weight: bold; transition: 0.4s; opacity: 0; z-index: 100; text-align: center; width: 80%; max-width: 300px; }
+        #saveToast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     </style>
 </head>
-<body>
+<body class="p-4">
 
-<div class="main-container">
-    <div id="register-screen" class="screen active-screen">
-        <div class="card" style="max-width: 400px; margin: 60px auto; text-align: center;">
-            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">สมัครสมาชิก</h1>
-            <p style="color: #666; margin-bottom: 25px;">สร้างบัญชี PAY SAVE ของคุณ</p>
+    <div id="register-screen" class="screen">
+        <div class="card max-w-sm mx-auto mt-10 text-center">
+            <img src="https://cdn-icons-png.flaticon.com/512/802/802353.png" class="w-20 mx-auto mb-4">
+            <h1 class="text-3xl font-black text-orange-600 mb-2">สร้างบัญชีใหม่</h1>
+            <p class="text-orange-400 mb-6">เริ่มคุมแคลกับจินเป่าเมี้ยว!</p>
             <input type="email" id="reg-email" class="input-field" placeholder="อีเมล">
             <input type="password" id="reg-pass" class="input-field" placeholder="รหัสผ่าน (6 ตัวขึ้นไป)">
-            <button class="btn btn-main" onclick="handleRegister()">ลงทะเบียน</button>
-            <p style="margin-top: 15px;">เป็นสมาชิกอยู่แล้ว? <a href="#" onclick="navigate('login-screen')" style="color: var(--primary);">เข้าสู่ระบบ</a></p>
+            <button class="btn btn-main" onclick="window.handleRegister()">ลงทะเบียน</button>
+            <p class="mt-4">เป็นทาสแมวอยู่แล้ว? <a href="#" onclick="navigate('login-screen')" class="text-orange-600 font-bold">เข้าสู่ระบบ</a></p>
         </div>
     </div>
 
-    <div id="login-screen" class="screen">
-        <div class="card" style="max-width: 400px; margin: 60px auto; text-align: center;">
-            <h1 style="color: var(--primary); font-size: 2.5rem; margin: 0;">PAY SAVE</h1>
-            <p style="color: #666; margin-bottom: 25px;">LOGIN</p>
+    <div id="login-screen" class="screen active-screen">
+        <div class="card max-w-sm mx-auto mt-10 text-center">
+            <img src="https://cdn-icons-png.flaticon.com/512/802/802353.png" class="w-20 mx-auto mb-4">
+            <h1 class="text-4xl font-black text-orange-600 mb-2">JINBAO</h1>
+            <p class="text-orange-400 mb-6">LOGIN</p>
             <input type="email" id="login-email" class="input-field" placeholder="อีเมล">
             <input type="password" id="login-pass" class="input-field" placeholder="รหัสผ่าน">
-            <button class="btn btn-main" onclick="handleEmailLogin()">login</button>
-            <p style="margin: 10px 0;">หรือ</p>
-            <button class="btn btn-google" onclick="loginWithGoogle()">
+            <button class="btn btn-main" onclick="window.handleEmailLogin()">เข้าสู่ระบบ</button>
+            <p class="my-4 font-bold text-orange-200">OR</p>
+            <button class="btn btn-google" onclick="window.handleGoogleLogin()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/action/google.svg" class="w-5">
                 <span>Continue with Google</span>
             </button>
-            <p style="margin-top: 15px;">ยังไม่มีบัญชี? <a href="#" onclick="navigate('register-screen')" style="color: var(--primary);">สมัครสมาชิก</a></p>
+            <p class="mt-6">ยังไม่มีบัญชี? <a href="#" onclick="navigate('register-screen')" class="text-orange-600 font-bold">สมัครสมาชิกเมี้ยว</a></p>
         </div>
     </div>
 
-    <div id="dashboard-screen" class="screen">
-        <div class="header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2>Dashboard</h2>
-            <button class="btn btn-outline" style="width: auto;" onclick="logout()">ออกจากระบบ</button>
-        </div>
-        <div id="budget-alert-banner" class="alert-banner">⚠️ ค่าไฟเกินงบประมาณที่ตั้งไว้!</div>
-        <div class="grid-2">
-            <div class="card" style="text-align: center;">
-                <p style="font-weight:bold;">สถานะปัจจุบัน <span id="ai-status" class="ai-badge">AI กำลังวิเคราะห์...</span></p>
-                <div style="display: flex; justify-content: space-around;">
-                    <div><p id="dash-watt" class="metric-value">0</p><p class="metric-label">Watts</p></div>
-                    <div><p id="dash-baht" class="metric-value" style="color: var(--secondary);">0.00</p><p class="metric-label">บาทสะสม (PEA)</p></div>
-                </div>
-                <p style="font-size: 0.7rem; color: #999; margin-top: 10px;">หน่วยสะสม: <span id="dash-unit">0.0000</span> kWh</p>
+    <div id="mainApp" class="screen max-w-md mx-auto space-y-6">
+        <div id="saveToast">🐱 บันทึกเรียบร้อยแล้วเมี้ยว!</div>
+
+        <header class="flex justify-between items-center bg-white p-4 rounded-2xl border-2 border-orange-200 shadow-sm">
+            <div class="flex items-center gap-4">
+                <div class="flex items-center gap-1"><span class="text-xl">🔥</span><span id="streakDisplay" class="text-lg font-black text-orange-500">1</span></div>
+                <div class="flex items-center gap-1"><span class="text-xl">🪙</span><span id="coinDisplay" class="text-lg font-black text-yellow-600">0</span></div>
             </div>
-            <div class="card">
-                <div class="chart-box"><canvas id="energyChart"></canvas></div>
+            <h1 class="text-2xl font-black text-orange-600 tracking-tight leading-none text-center">JINBAO<br><span id="userTag" class="text-[10px] font-bold text-orange-300 uppercase"></span></h1>
+            <div id="catEmojiHeader" class="text-3xl transition-transform duration-500">🐱</div> 
+        </header>
+
+        <section class="card text-center">
+            <div id="catStatusMsg" class="text-[10px] font-black uppercase tracking-widest text-orange-400 mb-2 italic">พร้อมคุมแคลหรือยังเมี้ยว?</div>
+            <p class="text-orange-400 font-bold text-xs uppercase mb-1 tracking-widest">วันนี้กินได้อีก</p>
+            <h2 id="remainingCal" class="text-6xl font-black text-orange-950 mb-3">0</h2>
+            <div class="w-full bg-orange-50 h-5 rounded-full overflow-hidden border-2 border-orange-100">
+                <div id="progressFill" class="progress-bar h-full bg-orange-500" style="width: 0%"></div>
             </div>
-        </div>
-        <div class="btn-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <button class="btn btn-outline" onclick="navigate('daily-screen')">⚡ สถิติรายวัน</button>
-            <button class="btn btn-outline" onclick="navigate('billing-screen')">📊 รายงาน & Export</button>
-            <button class="btn btn-outline" onclick="navigate('noti-screen')">🔔 แจ้งเตือน <span id="noti-count" style="color:red;">0</span></button>
-            <button class="btn btn-outline" onclick="navigate('analysis-screen')">📊 ประวัติอุปกรณ์</button>
-        </div>
+            <p class="mt-3 text-sm font-bold text-orange-800"><span id="totalConsumed">0</span> / 1922 kcal</p>
+        </section>
+
+        <details class="card p-4 overflow-hidden group">
+            <summary class="list-none cursor-pointer flex justify-between items-center font-black text-orange-400 uppercase text-sm">
+                <span>🍽️ บันทึกมื้อนี้เมี้ยว</span><i class="fas fa-chevron-down"></i>
+            </summary>
+            <div class="mt-4 space-y-4 pt-4 border-t-2 border-orange-50">
+                <input type="text" id="foodInput" placeholder="กินอะไรเข้าไป?" class="input-field">
+                <input type="number" id="calInput" placeholder="กี่แคลอรี่?" class="input-field text-2xl text-orange-600">
+                <button id="btnSave" class="btn btn-main">บันทึกรับ 5 🪙!</button>
+            </div>
+        </details>
+
+        <section>
+            <h3 class="text-lg font-black text-orange-950 mb-3 italic">History Today</h3>
+            <div id="historyList" class="space-y-3"></div>
+        </section>
+
+        <button onclick="window.handleLogout()" class="w-full py-4 bg-red-50 text-red-500 rounded-3xl font-black text-sm border-2 border-red-100">ออกจากระบบเมี้ยว</button>
     </div>
 
-    <div id="analysis-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>ประวัติการเปิด-ปิดอุปกรณ์</h2></div>
-        <div class="card">
-            <table>
-                <thead><tr><th>เวลา</th><th>อุปกรณ์</th><th>สถานะ</th><th>Watt</th></tr></thead>
-                <tbody id="appliance-log-body"></tbody>
-            </table>
-        </div>
-    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-    <div id="billing-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>รายงาน & ตั้งค่า</h2></div>
-        <div class="card">
-            <p style="font-weight: bold;">📥 ดาวน์โหลดรายงาน (CSV)</p>
-            <input type="date" id="date-picker" class="input-field">
-            <button class="btn btn-main" style="background: var(--success);" onclick="exportHistoryDataByDate()">ดาวน์โหลด CSV</button>
-        </div>
-        <div class="card">
-            <p style="font-weight: bold;">ตั้งงบประมาณรายเดือน (บาท)</p>
-            <input type="number" id="budget-input" class="input-field" placeholder="ระบุงบ เช่น 500">
-            <button class="btn btn-main" onclick="saveBudget()">บันทึกเป้าหมาย</button>
-        </div>
-    </div>
-
-    <div id="noti-screen" class="screen">
-        <div class="header-row"><div><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2 style="display: inline;">การแจ้งเตือน</h2></div><button class="btn btn-outline" onclick="resetNotifications()">ล้างทั้งหมด</button></div>
-        <div id="noti-list" class="card"><p style="text-align: center; color: #999;" id="no-noti">ยังไม่มีการแจ้งเตือน</p></div>
-    </div>
-
-    <div id="daily-screen" class="screen">
-        <div class="header-row"><span class="btn-back" onclick="navigate('dashboard-screen')">←</span><h2>สถิติรายวัน</h2></div>
-        <div class="card" style="height: 350px;"><canvas id="dailyChart"></canvas></div>
-    </div>
-</div>
-
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyDwfiBqiC-4DVPH0MIMXlMmpAyKb4ML5j8",
-        authDomain: "smart-money-meter.firebaseapp.com",
-        databaseURL: "https://smart-money-meter-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "smart-money-meter",
-        storageBucket: "smart-money-meter.firebasestorage.app",
-        messagingSenderId: "615707583064",
-        appId: "1:615707583064:web:93e21194a9a7b7da86602d"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const dbUrl = firebaseConfig.databaseURL + "/";
-
-    let localTotalUnits = null, lastWatt = 0, energyChart, dailyChart, lastLogMinute = -1;
-    let chartData = Array(15).fill(0), notiCount = 0, userBudget = localStorage.getItem('paysave_budget') || 0;
-    let hasAlertedBudget = false, lastApplianceState = "";
-    let powerBuffer = [];
-
-    // ฟังก์ชันสำหรับเก็บข้อมูล User ลง Database
-    async function syncUserProfile(user) {
-        const url = await getAuthUrl(`users/${user.uid}`);
-        if (!url) return;
-        const userData = {
-            displayName: user.displayName || "Email User",
-            email: user.email,
-            photoURL: user.photoURL || "",
-            lastLogin: new Date().toLocaleString('th-TH'),
-            uid: user.uid,
-            provider: user.providerData[0].providerId 
+        // Firebase Config ของคุณ
+        const firebaseConfig = { 
+            apiKey: "AIzaSyBOj2rySPpmc8NH3GmtXBZEO2o0Z0IwwuI", 
+            authDomain: "jinpao-nutration.firebaseapp.com", 
+            projectId: "jinpao-nutration", 
+            storageBucket: "jinpao-nutration.firebasestorage.app", 
+            appId: "1:847606006040:web:94b8acba2fbe49fa9bde6d" 
         };
-        fetch(url, { method: 'PATCH', body: JSON.stringify(userData) });
-    }
-
-    function handleRegister() {
-        const email = document.getElementById('reg-email').value;
-        const pass = document.getElementById('reg-pass').value;
-        if(pass.length < 6) return alert("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
-        auth.createUserWithEmailAndPassword(email, pass)
-            .then(async (result) => {
-                await syncUserProfile(result.user);
-                alert("ลงทะเบียนและเก็บข้อมูลสมาชิกเรียบร้อย!");
-            })
-            .catch(e => alert(e.message));
-    }
-
-    function handleEmailLogin() {
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-pass').value;
-        auth.signInWithEmailAndPassword(email, pass)
-            .catch(e => alert("อีเมลหรือรหัสผ่านไม่ถูกต้อง"));
-    }
-
-    function loginWithGoogle() {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        auth.signInWithPopup(provider).catch(e => alert(e.message));
-    }
-
-    function logout() { auth.signOut(); }
-
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            syncUserProfile(user); 
-            navigate('dashboard-screen');
-            startDataFetch();
-        } else {
-            navigate('login-screen');
-            stopDataFetch();
-        }
-    });
-
-    let fetchInterval;
-    function startDataFetch() { if(!fetchInterval) fetchInterval = setInterval(fetchData, 2000); }
-    function stopDataFetch() { clearInterval(fetchInterval); fetchInterval = null; }
-
-    async function getAuthUrl(path) {
-        const user = auth.currentUser;
-        if (!user) return null;
-        const token = await user.getIdToken();
-        return `${dbUrl}${path}.json?auth=${token}`;
-    }
-
-    async function fetchData() {
-        try {
-            const url = await getAuthUrl('');
-            if (!url) return;
-            const res = await fetch(url);
-            const data = await res.json();
-            if(!data) return;
-
-            lastWatt = data.current_watt || 0; 
-            if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
-
-            localTotalUnits += (lastWatt * (2 / 3600)) / 1000;
-            const patchUrl = await getAuthUrl('');
-            fetch(patchUrl, { method: 'PATCH', body: JSON.stringify({ total_units: localTotalUnits }) });
-
-            const currentBaht = (localTotalUnits * 4.42);
-            document.getElementById('dash-watt').innerText = lastWatt;
-            document.getElementById('dash-unit').innerText = localTotalUnits.toFixed(4);
-            document.getElementById('dash-baht').innerText = currentBaht.toFixed(2);
-
-            const banner = document.getElementById('budget-alert-banner');
-            if (userBudget > 0 && currentBaht > userBudget) {
-                banner.style.display = 'block';
-                banner.innerText = `⚠️ ค่าไฟเกินงบ! (${currentBaht.toFixed(2)} / ${userBudget} บาท)`;
-                if (!hasAlertedBudget) { 
-                    addNotification(`คำเตือน: ค่าไฟเกินงบ ${userBudget} บาทที่คุณตั้งไว้ (ปัจจุบัน ${currentBaht.toFixed(2)} บ.)`, 'danger'); 
-                    hasAlertedBudget = true; 
-                }
-            } else { banner.style.display = 'none'; }
-
-            // บันทึกประวัติทุก 5 นาที เพื่อให้มีข้อมูลใน CSV
-            const now = new Date();
-            if (now.getMinutes() % 5 === 0 && now.getMinutes() !== lastLogMinute) {
-                logToRate(lastWatt, localTotalUnits, now);
-                lastLogMinute = now.getMinutes();
-            }
-
-            chartData.push(lastWatt); chartData.shift(); energyChart.update('none');
-            analyzeAndLogAppliance(lastWatt);
-        } catch (e) { console.error(e); }
-    }
-
-    // --- ฟังก์ชันสำหรับการจัดการข้อมูล CSV ---
-    async function logToRate(watt, unit, now) {
-        const dateKey = now.toISOString().split('T')[0];
-        const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
-        const url = await getAuthUrl(`history/${dateKey}`);
-        if (url) { 
-            fetch(url, { method: 'POST', body: JSON.stringify({ time: timeStr, watt: watt, total: unit.toFixed(4) }) }); 
-        }
-    }
-
-    async function exportHistoryDataByDate() {
-        const date = document.getElementById('date-picker').value;
-        if (!date) return alert("เลือกวันที่");
-        const url = await getAuthUrl(`history/${date}`);
-        const res = await fetch(url);
-        const data = await res.json();
-        if(!data) return alert("ไม่มีข้อมูลในวันที่เลือก");
         
-        const rows = [["เวลา", "กำลังไฟฟ้า (Watts)", "หน่วยสะสม (kWh)", "ยอดเงินสะสม (บาท)"]];
-        Object.values(data).forEach(v => {
-            const unit = parseFloat(v.total) || 0;
-            rows.push([v.time, (v.watt || 0) + " W", unit.toFixed(4) + " kWh", (unit * 4.42).toFixed(2) + " บาท"]);
-        });
-        
-        let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
-        const link = document.createElement("a");
-        link.href = encodeURI(csv);
-        link.download = `Paysave_Report_${date}.csv`;
-        link.click();
-    }
-    // ----------------------------------------
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const googleProvider = new GoogleAuthProvider();
 
-    async function analyzeAndLogAppliance(w) {
-        powerBuffer.push(w);
-        if(powerBuffer.length > 5) powerBuffer.shift();
-        let diff = Math.max(...powerBuffer) - Math.min(...powerBuffer);
-        let name = "สแตนด์บาย";
+        let currentUser = null;
 
-        if (w > 10) {
-            if (w < 50) name = "พัดลม/ไฟ";
-            else if (w < 500) {
-                name = diff < 20 ? "ทีวี/จอภาพ" : "ตู้เย็น (คอมเพรสเซอร์ทำงาน)";
+        // --- NAVIGATION ---
+        window.navigate = (id) => {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen'));
+            document.getElementById(id).classList.add('active-screen');
+        };
+
+        // --- AUTH FUNCTIONS ---
+        window.handleRegister = async () => {
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-pass').value;
+            try { 
+                await createUserWithEmailAndPassword(auth, email, pass);
+                alert("สมัครสมาชิกสำเร็จ!");
+            } catch(e) { alert("สมัครไม่สำเร็จ: " + e.message); }
+        };
+
+        window.handleEmailLogin = async () => {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+            try { await signInWithEmailAndPassword(auth, email, pass); } 
+            catch(e) { alert("อีเมลหรือรหัสผ่านผิดเมี้ยว!"); }
+        };
+
+        window.handleGoogleLogin = async () => {
+            try { await signInWithPopup(auth, googleProvider); } 
+            catch(e) { console.error(e); }
+        };
+
+        window.handleLogout = () => signOut(auth);
+
+        // --- AUTH STATE MONITOR ---
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                navigate('mainApp');
+                document.getElementById('userTag').innerText = user.email.split('@')[0];
+                renderData();
             } else {
-                if (w > 1500 && diff < 50) name = "เครื่องทำน้ำอุ่น/เตารีด";
-                else name = "เครื่องปรับอากาศ";
+                currentUser = null;
+                navigate('login-screen');
             }
-        } else {
-            name = "ปิดเครื่อง";
-        }
-
-        document.getElementById('ai-status').innerText = name;
-
-        if (name !== lastApplianceState) {
-            const dateKey = new Date().toISOString().split('T')[0];
-            const timeStr = new Date().getHours().toString().padStart(2, '0') + ":" + new Date().getMinutes().toString().padStart(2, '0');
-            const logUrl = await getAuthUrl(`appliance_logs/${dateKey}`);
-            if (logUrl) {
-                fetch(logUrl, { method: 'POST', body: JSON.stringify({ time: timeStr, appliance: name, status: w > 10 ? "เปิด" : "ปิด", watt: w }) });
-            }
-            lastApplianceState = name;
-            if(document.getElementById('analysis-screen').classList.contains('active-screen')) loadApplianceLogs();
-        }
-    }
-
-    async function loadApplianceLogs() {
-        const dateKey = new Date().toISOString().split('T')[0];
-        const url = await getAuthUrl(`appliance_logs/${dateKey}`);
-        if (!url) return;
-        const res = await fetch(url);
-        const data = await res.json();
-        const tbody = document.getElementById('appliance-log-body');
-        if (!data || !tbody) return;
-        tbody.innerHTML = "";
-        Object.values(data).reverse().slice(0, 10).forEach(log => {
-            tbody.innerHTML += `<tr><td>${log.time}</td><td>${log.appliance}</td><td>${log.status}</td><td>${log.watt} W</td></tr>`;
         });
-    }
 
-    function saveBudget() { 
-        const val = document.getElementById('budget-input').value; 
-        if (val > 0) { 
-            userBudget = parseFloat(val); 
-            localStorage.setItem('paysave_budget', userBudget); 
-            hasAlertedBudget = false; 
-            addNotification(`คุณตั้งงบประมาณค่าไฟเดือนนี้ไว้ไม่เกิน ${userBudget} บาท`, 'info');
-            alert("บันทึกเป้าหมายแล้ว"); 
-            fetchData(); 
-        } 
-    }
-
-    function addNotification(msg, type = 'info') {
-        const list = document.getElementById('noti-list');
-        if (document.getElementById('no-noti')) document.getElementById('no-noti').style.display = 'none';
-        notiCount++;
-        document.getElementById('noti-count').innerText = notiCount;
-        const div = document.createElement('div');
-        div.className = `noti-item ${type}`;
-        div.innerHTML = `<strong>แจ้งเตือน:</strong> ${msg} <br><small>${new Date().toLocaleString('th-TH')}</small>`;
-        if(list) list.prepend(div);
-        let saved = JSON.parse(localStorage.getItem('paysave_notis') || "[]");
-        saved.push({ msg, type, time: new Date().toLocaleString('th-TH') });
-        localStorage.setItem('paysave_notis', JSON.stringify(saved));
-    }
-
-    function loadNotifications() {
-        const saved = JSON.parse(localStorage.getItem('paysave_notis') || "[]");
-        if (saved.length > 0) {
-            if(document.getElementById('no-noti')) document.getElementById('no-noti').style.display = 'none';
-            saved.forEach(n => {
-                const div = document.createElement('div');
-                div.className = `noti-item ${n.type}`;
-                div.innerHTML = `<strong>แจ้งเตือน:</strong> ${n.msg} <br><small>${n.time}</small>`;
-                document.getElementById('noti-list').prepend(div);
+        // --- MAIN APP LOGIC ---
+        document.getElementById('btnSave').onclick = async () => {
+            if(!currentUser) return;
+            const name = document.getElementById('foodInput').value, cal = parseFloat(document.getElementById('calInput').value);
+            if(!name || isNaN(cal)) return alert("ใส่ข้อมูลให้ครบ!");
+            
+            await addDoc(collection(db, "food_logs"), { 
+                uid: currentUser.uid, 
+                foodName: name, 
+                calories: cal, 
+                timestamp: serverTimestamp(), 
+                date: new Date().toLocaleDateString() 
             });
-            notiCount = saved.length;
-            document.getElementById('noti-count').innerText = notiCount;
+            
+            document.getElementById('foodInput').value = ""; document.getElementById('calInput').value = "";
+            showToast("🐱 บันทึกแล้วเมี้ยว!");
+            renderData();
+        };
+
+        async function renderData() {
+            if(!currentUser) return;
+            const list = document.getElementById('historyList'); 
+            const today = new Date().toLocaleDateString();
+            let total = 0;
+
+            const q = query(
+                collection(db, "food_logs"), 
+                where("uid", "==", currentUser.uid),
+                orderBy("timestamp", "desc")
+            );
+
+            const snap = await getDocs(q);
+            list.innerHTML = "";
+            
+            snap.forEach(item => {
+                const d = item.data();
+                if(d.date === today) {
+                    total += d.calories;
+                    list.innerHTML += `<div class="bg-white p-4 rounded-2xl border-2 border-orange-100 flex justify-between items-center shadow-sm">
+                        <div><p class="font-black text-orange-950">${d.foodName}</p><p class="text-orange-600 font-bold">${d.calories} kcal</p></div>
+                        <button onclick="window.delItem('${item.id}')" class="text-orange-200"><i class="fas fa-times-circle text-2xl"></i></button>
+                    </div>`;
+                }
+            });
+
+            document.getElementById('totalConsumed').innerText = total;
+            document.getElementById('remainingCal').innerText = Math.max(0, 1922 - total);
+            document.getElementById('progressFill').style.width = Math.min(100, (total / 1922) * 100) + "%";
         }
-    }
 
-    function resetNotifications() { if(confirm("ลบทั้งหมด?")) { localStorage.removeItem('paysave_notis'); location.reload(); } }
-    
-    function navigate(id) { 
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active-screen')); 
-        document.getElementById(id).classList.add('active-screen'); 
-        if (id === 'daily-screen') updateDailyChart();
-        if (id === 'analysis-screen') loadApplianceLogs();
-    }
-
-    async function updateDailyChart() {
-        const dateKey = new Date().toISOString().split('T')[0];
-        const url = await getAuthUrl(`history/${dateKey}`);
-        if (!url) return;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (!data) return;
-        let p = { "00:00": 0, "06:00": 0, "12:00": 0, "18:00": 0 };
-        Object.values(data).forEach(e => {
-            const h = parseInt(e.time.split(':')[0]);
-            const u = parseFloat(e.total);
-            if (h < 6) p["00:00"] = Math.max(p["00:00"], u);
-            else if (h < 12) p["06:00"] = Math.max(p["06:00"], u);
-            else if (h < 18) p["12:00"] = Math.max(p["12:00"], u);
-            else p["18:00"] = Math.max(p["18:00"], u);
-        });
-        dailyChart.data.datasets[0].data = [p["00:00"], p["06:00"], p["12:00"], p["18:00"]];
-        dailyChart.update();
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('date-picker').value = new Date().toISOString().split('T')[0];
-        loadNotifications();
-        if(userBudget > 0) document.getElementById('budget-input').value = userBudget;
-        energyChart = new Chart(document.getElementById('energyChart'), { type: 'line', data: { labels: Array(15).fill(""), datasets: [{ data: chartData, borderColor: '#9370DB', fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
-        dailyChart = new Chart(document.getElementById('dailyChart'), { type: 'bar', data: { labels: ["00:00", "06:00", "12:00", "18:00"], datasets: [{ label: 'kWh', data: [0,0,0,0], backgroundColor: '#9370DB' }] }, options: { responsive: true, maintainAspectRatio: false } });
-    });
-</script>
+        window.delItem = async (id) => { if(confirm("ลบเมี้ยว?")) { await deleteDoc(doc(db, "food_logs", id)); renderData(); } };
+        function showToast(msg) { const t = document.getElementById('saveToast'); t.innerText = msg; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000); }
+    </script>
 </body>
 </html>
