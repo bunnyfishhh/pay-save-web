@@ -147,7 +147,7 @@
 
     // ฟังก์ชันสำหรับเก็บข้อมูล User ลง Database
     async function syncUserProfile(user) {
-        const url = await getAuthUrl(`users/${user.uid}`);
+        const url = await getAuthUrl(``); // เข้าถึงโฟลเดอร์ User โดยตรง
         if (!url) return;
         const userData = {
             displayName: user.displayName || "Email User",
@@ -205,17 +205,19 @@
         const user = auth.currentUser;
         if (!user) return null;
         const token = await user.getIdToken();
-        return `${dbUrl}${path}.json?auth=${token}`;
+        // ปรับปรุง Path ให้ชี้ไปที่ users/UID/ เสมอ
+        return `${dbUrl}users/${user.uid}/${path}.json?auth=${token}`;
     }
 
     async function fetchData() {
         try {
-            const url = await getAuthUrl('');
+            const url = await getAuthUrl(''); // ดึงข้อมูลทั้งหมดในห้องของ User
             if (!url) return;
             const res = await fetch(url);
             const data = await res.json();
             if(!data) return;
 
+            // ดึงค่าจาก Path ส่วนตัวของผู้ใช้
             lastWatt = data.current_watt || 0; 
             if(localTotalUnits === null) localTotalUnits = data.total_units || 0;
 
@@ -238,7 +240,6 @@
                 }
             } else { banner.style.display = 'none'; }
 
-            // บันทึกประวัติทุก 5 นาที เพื่อให้มีข้อมูลใน CSV
             const now = new Date();
             if (now.getMinutes() % 5 === 0 && now.getMinutes() !== lastLogMinute) {
                 logToRate(lastWatt, localTotalUnits, now);
@@ -250,7 +251,6 @@
         } catch (e) { console.error(e); }
     }
 
-    // --- ฟังก์ชันสำหรับการจัดการข้อมูล CSV ---
     async function logToRate(watt, unit, now) {
         const dateKey = now.toISOString().split('T')[0];
         const timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
@@ -266,7 +266,7 @@
         const url = await getAuthUrl(`history/${date}`);
         const res = await fetch(url);
         const data = await res.json();
-        if(!data) return alert("ไม่มีข้อมูลในวันที่เลือก");
+        if(!data) return alert("ไม่มีข้อมูลในประวัติของคุณสำหรับวันที่เลือก");
         
         const rows = [["เวลา", "กำลังไฟฟ้า (Watts)", "หน่วยสะสม (kWh)", "ยอดเงินสะสม (บาท)"]];
         Object.values(data).forEach(v => {
@@ -277,10 +277,11 @@
         let csv = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
         const link = document.createElement("a");
         link.href = encodeURI(csv);
-        link.download = `Paysave_Report_${date}.csv`;
+        link.download = `Paysave_UserReport_${date}.csv`;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     }
-    // ----------------------------------------
 
     async function analyzeAndLogAppliance(w) {
         powerBuffer.push(w);
